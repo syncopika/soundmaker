@@ -1,0 +1,270 @@
+<!doctype html>
+
+<html>
+
+<head>
+	<title> web audio api custom sounds </title>
+	<style>
+		td{
+			border: #000 solid 1px;
+			font-size: 50px;
+			font-family: monospace;
+		}
+		.note:hover {
+			background-color: #7FFF00;
+		}
+		.preset {
+			border-left: 1px solid #000;
+			padding-left: 1%;
+		}
+	</style>
+</head>
+
+<body>
+	<p> make sounds </p>
+	<table>
+		<tr>
+			<td class='note' id='a'>A</td>
+			<td class='note' id='b'>B</td>
+			<td class='note' id='c'>C</td>
+			<td class='note' id='d'>D</td>			
+			<td class='note' id='e'>E</td>
+			<td class='note' id='f'>F</td>			
+			<td class='note' id='g'>G</td>
+		</tr>
+	</table>
+	<hr />
+	
+	<div class='preset' id='instrumentPreset1'>
+		<h3> instrument preset 1 </h3>
+		
+		<div id='waveNode1' class='waveNode'>
+			<h3> wave node 1 </h3>
+			<label for='waveOscVolume'> wav osc vol: </label>
+			<input name='waveOscVolume' id='waveOscVolume' type='range' max='.8' min='0.05' step='0.01' value='0.08'/>
+			<p id='wovVolValue'> 0.08 </p>
+			
+			<br />
+			
+			<label for='waveOscType'> wav osc type: </label>
+			<select name='waveOscType' id='waveOscType'>
+				<option> square </option>
+				<option> triangle </option>
+				<option> sawtooth </option>
+			</select>
+			
+			<br />
+
+		</div>	
+		
+		<br />
+		
+		<div class='noiseNode' id='noiseNode1'>
+			<h3> noise node 1 </h3>
+			
+			<label for='noiseOscVolume'> noise osc vol: </label>
+			<input name='noiseOscVolume' id='noiseOscVolume' type='range' max='1' min='0.1' step='0.1' value='0.1' />
+			<p id='noiseVolValue'> 0.1 </p>
+		
+			<br />
+			
+			<label for='noiseOscFreq'> noise osc freq: </label>
+			<input name='noiseOscFreq' id='noiseOscFreq' type='range' max='5000' min='1000' step='100' value='1800' />
+			<p id='noiseOscFreqValue'> 1800 </p>
+			
+			<br />
+			
+			<label for='noiseFilterPassType'> noise filter pass type: </label>
+			<select name='noiseFilterPassType' id='noiseFilterPassType'>
+				<option> highpass </option>
+				<option> lowpass </option>
+			</select>
+			
+			<br />
+		</div>
+		
+		<br />
+		<br />
+		
+		<hr />
+		<button id='instrumentPresetDownload'> download preset as .json </button>
+	</div>
+	
+</body>
+
+</html>
+
+<script>
+	let NOTE_FREQ = {
+		"B": 493.88,
+		"A": 440.00,
+		"G": 392.00,
+		"F": 349.23,
+		"E": 329.63,
+		"D": 293.66,
+		"C": 261.63,
+	};
+	
+	let state = {
+		'waveOscVolume1': 0.08,
+		'waveOscType1': 'square',
+		'noiseOscVolume1': 0.1,
+		'noiseBufPassType1': 'highpass',
+		'noiseOscFreq1': 1800,
+	};
+	
+	let waveNode1 = {
+		'waveOscVolume1': 0.08,
+		'waveOscType1': 'square',
+	};
+	
+	let noiseNode1 = {
+		'noiseOscVolume1': 0.1,
+		'noiseBufPassType1': 'highpass',
+		'noiseOscFreq1': 1800,
+	};
+	
+	
+	let preset1 = {
+		'presetName': 'preset1',
+		'numWaveNodes': 1,
+		'numNoiseNodes': 1,
+		'waveNodes': [
+			waveNode1
+		],
+		'noiseNodes': [
+			noiseNode1
+		],
+		"comments": "this is neat"
+	};
+	//console.log(preset1);
+	
+	let currPreset = preset1;
+	
+
+	// make a function for this part 
+	document.getElementById('waveOscVolume').addEventListener('input', (evt) => {
+		state.waveOscVolume1 = evt.target.valueAsNumber;
+		document.getElementById('wovVolValue').innerHTML = evt.target.valueAsNumber;
+	});
+	
+	document.getElementById('waveOscType').addEventListener('change', (evt) => {
+		state.waveOscType1 = evt.target.value;
+	});
+	
+	document.getElementById('noiseOscVolume').addEventListener('input', (evt) => {
+		state.noiseOscVolume1 = evt.target.valueAsNumber;
+		document.getElementById('noiseVolValue').innerHTML = evt.target.valueAsNumber;
+	});
+	
+	document.getElementById('noiseOscFreq').addEventListener('input', (evt) => {
+		state.noiseOscFreq1 = evt.target.valueAsNumber;
+		document.getElementById('noiseOscFreqValue').innerHTML = evt.target.valueAsNumber;
+	});
+	
+	document.getElementById('noiseFilterPassType').addEventListener('change', (evt) => {
+		state.noiseBufPassType1 = evt.target.value;
+	});
+
+	///////////////////////////////////  START
+	let audioContext = new AudioContext();
+	audioContext.suspend();
+
+	let notes = [...document.getElementsByClassName("note")];
+	notes.forEach((note) => {
+		//console.log(note);
+		note.addEventListener('click', (event) => {
+			//console.log(event.toElement);
+			audioContext.resume().then(() => {
+				processNote(event.toElement.innerHTML, audioContext);
+			});
+		});
+	});
+	
+	function processNote(note, audioContext){
+		// play the given note based on the current synth setup
+		let volume = state['noiseOscVolume1']; //0.1;
+		
+		let noise = addNoise(audioContext);
+		let noiseOsc = noise[0];
+		let noiseEnv = noise[1];
+		
+		let snap = addWaveNode(audioContext);
+		let snapOsc = snap[0];
+		let snapOscEnv = snap[1];
+		
+		let time = audioContext.currentTime;
+		
+		noiseEnv.gain.setValueAtTime(volume, time);
+		//noiseEnv.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+	
+		snapOsc.frequency.setValueAtTime(NOTE_FREQ[note], time);
+		snapOscEnv.gain.setValueAtTime(state['waveOscVolume1'], time);
+		//snapOscEnv.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+		
+		snapOsc.start(0);
+		noiseOsc.start(0);
+		snapOsc.stop(audioContext.currentTime + .100);
+		noiseOsc.stop(audioContext.currentTime + .100);
+	}
+	/////////////////////////////////////////
+	
+	// you can start a buffer source like an oscillator!
+	function addNoise(audioContext){
+		// this stuff should be customizable
+		let bufSize = audioContext.sampleRate;
+		let buffer = audioContext.createBuffer(1, bufSize, bufSize);
+		let output = buffer.getChannelData(0);
+		for(let i = 0; i < bufSize; i++){
+			output[i] = Math.random() * 2 - 1;
+		}
+		
+		this.noiseBuffer = buffer;
+		let noise = audioContext.createBufferSource();
+		noise.buffer = this.noiseBuffer;
+		let noiseFilter = audioContext.createBiquadFilter();
+		noiseFilter.type = state['noiseBufPassType1'];
+		noiseFilter.frequency.value = state['noiseOscFreq1']; //1800;
+		noise.connect(noiseFilter);
+
+		// add gain to the noise filter 
+		let noiseEnvelope = audioContext.createGain();
+		noiseFilter.connect(noiseEnvelope);
+		noiseEnvelope.connect(audioContext.destination);
+		return [noise, noiseEnvelope];
+	}
+	
+	function addWaveNode(audioContext){
+		let snapOsc = audioContext.createOscillator();
+		snapOsc.type = state['waveOscType1'];
+		
+		let snapOscEnv = audioContext.createGain();
+		snapOsc.connect(snapOscEnv);
+		snapOscEnv.connect(audioContext.destination);
+		
+		return [snapOsc, snapOscEnv];
+	}
+	
+	function downloadPreset(){
+		let fileName = prompt("enter filename");
+		if(fileName === null || fileName === ""){
+			return;
+		}
+		
+		let blob = new Blob([JSON.stringify(currPreset, null, 2)], {type: "application/json"});
+		//make a url for that blob
+		let url = URL.createObjectURL(blob);
+		
+		let link = document.createElement('a');
+		link.href = url; //link the a element to the blob's url
+		link.download = fileName + ".json";
+		
+		//then simulate a click to the blob url to initiate download
+		link.click();
+	}
+	
+	document.getElementById('instrumentPresetDownload').addEventListener('click', () => {
+		downloadPreset();
+	});
+
+</script>
