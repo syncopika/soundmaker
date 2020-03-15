@@ -36,26 +36,7 @@
 	<hr />
 	
 	<div class='preset' id='instrumentPreset1'>
-		<h3> instrument preset 1 </h3>
-		
-		<div id='waveNode1' class='waveNode'>
-			<h3> wave node 1 </h3>
-			<label for='waveOscVolume'> wav osc vol: </label>
-			<input name='waveOscVolume' id='waveOscVolume' type='range' max='.8' min='0.05' step='0.01' value='0.08'/>
-			<p id='wovVolValue'> 0.08 </p>
-			
-			<br />
-			
-			<label for='waveOscType'> wav osc type: </label>
-			<select name='waveOscType' id='waveOscType'>
-				<option> square </option>
-				<option> triangle </option>
-				<option> sawtooth </option>
-			</select>
-			
-			<br />
-
-		</div>	
+		<!--<h3> instrument preset 1 </h3>-->
 		
 		<br />
 		
@@ -98,6 +79,7 @@
 </html>
 
 <script>
+
 	let NOTE_FREQ = {
 		"B": 493.88,
 		"A": 440.00,
@@ -132,10 +114,10 @@
 	
 	let preset1 = {
 		'presetName': 'preset1',
-		'numWaveNodes': 1,
+		'numWaveNodes': 0,//1,
 		'numNoiseNodes': 1,
 		'waveNodes': [
-			waveNode1
+			//waveNode1
 		],
 		'noiseNodes': [
 			noiseNode1
@@ -146,16 +128,6 @@
 	
 	let currPreset = preset1;
 	
-
-	// make a function for this part 
-	document.getElementById('waveOscVolume').addEventListener('input', (evt) => {
-		waveNode1.waveOscVolume1 = evt.target.valueAsNumber;
-		document.getElementById('wovVolValue').innerHTML = evt.target.valueAsNumber;
-	});
-	
-	document.getElementById('waveOscType').addEventListener('change', (evt) => {
-		waveNode1.waveOscType1 = evt.target.value;
-	});
 	
 	document.getElementById('noiseOscVolume').addEventListener('input', (evt) => {
 		noiseNode1.noiseOscVolume1 = evt.target.valueAsNumber;
@@ -276,11 +248,93 @@
 	
 	function createNewWavOsc(parentElement){
 		// create a new wave osc section in html 
+		let newNodeParams = {};
+		
+		let newIdNum = currPreset.numWaveNodes + 1;
+		let newWaveNodeDiv = document.createElement('div');
+		newWaveNodeDiv.id = 'waveNode' + newIdNum;
+		newWaveNodeDiv.className = 'waveNode';
+		
+		let h3 = document.createElement('h3');
+		h3.innerHTML = 'wave node ' + newIdNum;
+		
+		let input = document.createElement('input');
+		input.setAttribute('name', 'waveOscVolume' + newIdNum);
+		input.setAttribute('id', 'waveOscVolume' + newIdNum);
+		input.setAttribute('type', 'range');
+		input.setAttribute('max', 0.8);
+		input.setAttribute('min', 0.05);
+		input.setAttribute('step', 0.01);
+		input.setAttribute('value', 0.08);
+		
+		let volumeValue = document.createElement('p');
+		volumeValue.id = 'waveNodeVolValue' + newIdNum;
+		volumeValue.innerHTML = input.value;
+		
+		let label = document.createElement('label');
+		label.innerHTML = 'wav osc vol: ';
+		label.setAttribute('for', 'waveOscVolume' + newIdNum);
+		
+		let brElement1 = document.createElement('br');
+		let brElement2 = document.createElement('br');
+		
+		let select = document.createElement('select');
+		select.setAttribute('name', 'waveOscType' + newIdNum);
+		select.id = 'waveOscType' + newIdNum;
+		
+		let options = [
+			'square',
+			'triangle',
+			'sawtooth'
+		];
+		
+		options.forEach((opt) => {
+			let newOption = document.createElement('option');
+			newOption.innerHTML = opt;
+			select.appendChild(newOption);
+		});
+		
+		let selectLabel = document.createElement('label');
+		selectLabel.innerHTML = 'wav osc type: ';
+		selectLabel.setAttribute('for', 'waveOscType' + newIdNum);
+		
+		// add event listeners for input and select
+		input.addEventListener('input', (evt) => {
+			newNodeParams[input.id] = evt.target.valueAsNumber;
+			volumeValue.innerHTML = evt.target.valueAsNumber;
+		});
+	
+		select.addEventListener('change', (evt) => {
+			newNodeParams[select.id] = evt.target.value;
+		});
+		
+		// put it all together
+		newWaveNodeDiv.appendChild(h3);
+		newWaveNodeDiv.appendChild(label);
+		newWaveNodeDiv.appendChild(input);
+		newWaveNodeDiv.appendChild(volumeValue);
+		newWaveNodeDiv.appendChild(brElement1);
+		newWaveNodeDiv.appendChild(selectLabel);
+		newWaveNodeDiv.appendChild(select);
+		newWaveNodeDiv.appendChild(brElement2);
+		
+		// TODO: don't need this after dynamic noise node creation implemented?
+		let parent = document.getElementById(parentElement);
+		parent.insertBefore(newWaveNodeDiv, parent.firstChild);
+		
+		newNodeParams[input.id] = 0.08;
+		newNodeParams[select.id] = 'square';
+		
+		currPreset.numWaveNodes += 1;
+		currPreset.waveNodes.push(newNodeParams);
 	}
 	
 	function createNewNoiseOsc(parentElement){
 		// create a new noise section in html 
 	}
+	
+	
+	createNewWavOsc('instrumentPreset1');
 	
 	document.getElementById('instrumentPresetDownload').addEventListener('click', () => {
 		downloadPreset();
