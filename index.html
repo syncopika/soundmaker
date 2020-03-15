@@ -87,6 +87,7 @@
 		<br />
 		
 		<hr />
+		<button id='instrumentPresetImport'> import preset as .json </button>
 		<button id='instrumentPresetDownload'> download preset as .json </button>
 	</div>
 	
@@ -105,6 +106,7 @@
 		"C": 261.63,
 	};
 	
+	/*
 	let state = {
 		'waveOscVolume1': 0.08,
 		'waveOscType1': 'square',
@@ -112,6 +114,7 @@
 		'noiseBufPassType1': 'highpass',
 		'noiseOscFreq1': 1800,
 	};
+	*/
 	
 	let waveNode1 = {
 		'waveOscVolume1': 0.08,
@@ -176,20 +179,50 @@
 		note.addEventListener('click', (event) => {
 			//console.log(event.toElement);
 			audioContext.resume().then(() => {
-				processNote(event.toElement.innerHTML, audioContext);
+				processNote(event.toElement.innerHTML, audioContext, currPreset);
 			});
 		});
 	});
 	
-	function processNote(note, audioContext){
+	function processNote(note, audioContext, currPreset){
 		// play the given note based on the current synth setup
+		let allNodes = [];
+		let time = audioContext.currentTime;
+		
+		currPreset.waveNodes.forEach((node) => {
+			let snap = addWaveNode(node, audioContext);
+			let snapOsc = snap[0];
+			let snapEnv = snap[1];
+			let volume = node['waveOscVolume1'];
+			
+			snapOsc.frequency.setValueAtTime(NOTE_FREQ[note], time);
+			snapEnv.gain.setValueAtTime(node['waveOscVolume1'], time);
+			allNodes.push(snapOsc);
+		});
+		
+		currPreset.noiseNodes.forEach((node) => {
+			let noise = addNoise(node, audioContext);
+			let noiseOsc = noise[0];
+			let noiseEnv = noise[1];
+			let volume = node['noiseOscVolume1'];
+			
+			noiseEnv.gain.setValueAtTime(volume, time);
+			allNodes.push(noiseOsc);
+		});
+		
+		allNodes.forEach((osc) => {
+			osc.start(0);
+			osc.stop(audioContext.currentTime + .100);
+		});
+		
+		/*
 		let volume = state['noiseOscVolume1']; //0.1;
 		
-		let noise = addNoise(audioContext);
+		let noise = addNoise(currPreset, audioContext);
 		let noiseOsc = noise[0];
 		let noiseEnv = noise[1];
 		
-		let snap = addWaveNode(audioContext);
+		let snap = addWaveNode(currPreset, audioContext);
 		let snapOsc = snap[0];
 		let snapOscEnv = snap[1];
 		
@@ -206,11 +239,14 @@
 		noiseOsc.start(0);
 		snapOsc.stop(audioContext.currentTime + .100);
 		noiseOsc.stop(audioContext.currentTime + .100);
+		
+		*/
 	}
 	/////////////////////////////////////////
 	
 	// you can start a buffer source like an oscillator!
-	function addNoise(audioContext){
+	function addNoise(noiseNodeParams, audioContext){
+	
 		// this stuff should be customizable
 		let bufSize = audioContext.sampleRate;
 		let buffer = audioContext.createBuffer(1, bufSize, bufSize);
@@ -223,8 +259,8 @@
 		let noise = audioContext.createBufferSource();
 		noise.buffer = this.noiseBuffer;
 		let noiseFilter = audioContext.createBiquadFilter();
-		noiseFilter.type = state['noiseBufPassType1'];
-		noiseFilter.frequency.value = state['noiseOscFreq1']; //1800;
+		noiseFilter.type = noiseNodeParams['noiseBufPassType1'];
+		noiseFilter.frequency.value = noiseNodeParams['noiseOscFreq1']; //1800;
 		noise.connect(noiseFilter);
 
 		// add gain to the noise filter 
@@ -234,9 +270,9 @@
 		return [noise, noiseEnvelope];
 	}
 	
-	function addWaveNode(audioContext){
+	function addWaveNode(waveNodeParams, audioContext){
 		let snapOsc = audioContext.createOscillator();
-		snapOsc.type = state['waveOscType1'];
+		snapOsc.type = waveNodeParams['waveOscType1'];
 		
 		let snapOscEnv = audioContext.createGain();
 		snapOsc.connect(snapOscEnv);
