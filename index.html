@@ -87,6 +87,8 @@
 		<br />
 		
 		<hr />
+		<button> add new wave osc </button>
+		<button> add new noise osc </button>
 		<button id='instrumentPresetImport'> import preset as .json </button>
 		<button id='instrumentPresetDownload'> download preset as .json </button>
 	</div>
@@ -147,26 +149,26 @@
 
 	// make a function for this part 
 	document.getElementById('waveOscVolume').addEventListener('input', (evt) => {
-		state.waveOscVolume1 = evt.target.valueAsNumber;
+		waveNode1.waveOscVolume1 = evt.target.valueAsNumber;
 		document.getElementById('wovVolValue').innerHTML = evt.target.valueAsNumber;
 	});
 	
 	document.getElementById('waveOscType').addEventListener('change', (evt) => {
-		state.waveOscType1 = evt.target.value;
+		waveNode1.waveOscType1 = evt.target.value;
 	});
 	
 	document.getElementById('noiseOscVolume').addEventListener('input', (evt) => {
-		state.noiseOscVolume1 = evt.target.valueAsNumber;
+		noiseNode1.noiseOscVolume1 = evt.target.valueAsNumber;
 		document.getElementById('noiseVolValue').innerHTML = evt.target.valueAsNumber;
 	});
 	
 	document.getElementById('noiseOscFreq').addEventListener('input', (evt) => {
-		state.noiseOscFreq1 = evt.target.valueAsNumber;
+		noiseNode1.noiseOscFreq1 = evt.target.valueAsNumber;
 		document.getElementById('noiseOscFreqValue').innerHTML = evt.target.valueAsNumber;
 	});
 	
 	document.getElementById('noiseFilterPassType').addEventListener('change', (evt) => {
-		state.noiseBufPassType1 = evt.target.value;
+		noiseNode1.noiseBufPassType1 = evt.target.value;
 	});
 
 	///////////////////////////////////  START
@@ -214,33 +216,6 @@
 			osc.start(0);
 			osc.stop(audioContext.currentTime + .100);
 		});
-		
-		/*
-		let volume = state['noiseOscVolume1']; //0.1;
-		
-		let noise = addNoise(currPreset, audioContext);
-		let noiseOsc = noise[0];
-		let noiseEnv = noise[1];
-		
-		let snap = addWaveNode(currPreset, audioContext);
-		let snapOsc = snap[0];
-		let snapOscEnv = snap[1];
-		
-		let time = audioContext.currentTime;
-		
-		noiseEnv.gain.setValueAtTime(volume, time);
-		//noiseEnv.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
-	
-		snapOsc.frequency.setValueAtTime(NOTE_FREQ[note], time);
-		snapOscEnv.gain.setValueAtTime(state['waveOscVolume1'], time);
-		//snapOscEnv.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-		
-		snapOsc.start(0);
-		noiseOsc.start(0);
-		snapOsc.stop(audioContext.currentTime + .100);
-		noiseOsc.stop(audioContext.currentTime + .100);
-		
-		*/
 	}
 	/////////////////////////////////////////
 	
@@ -297,6 +272,14 @@
 		
 		//then simulate a click to the blob url to initiate download
 		link.click();
+	}
+	
+	function createNewWavOsc(parentElement){
+		// create a new wave osc section in html 
+	}
+	
+	function createNewNoiseOsc(parentElement){
+		// create a new noise section in html 
 	}
 	
 	document.getElementById('instrumentPresetDownload').addEventListener('click', () => {
