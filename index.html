@@ -36,33 +36,12 @@
 	<hr />
 	
 	<div class='preset' id='instrumentPreset1'>
-		<!--<h3> instrument preset 1 </h3>-->
 		
 		<br />
+		<br />
 		
-		<div class='noiseNode' id='noiseNode1'>
-			<h3> noise node 1 </h3>
-			
-			<label for='noiseOscVolume'> noise osc vol: </label>
-			<input name='noiseOscVolume' id='noiseOscVolume' type='range' max='1' min='0.1' step='0.1' value='0.1' />
-			<p id='noiseVolValue'> 0.1 </p>
-		
-			<br />
-			
-			<label for='noiseOscFreq'> noise osc freq: </label>
-			<input name='noiseOscFreq' id='noiseOscFreq' type='range' max='5000' min='1000' step='100' value='1800' />
-			<p id='noiseOscFreqValue'> 1800 </p>
-			
-			<br />
-			
-			<label for='noiseFilterPassType'> noise filter pass type: </label>
-			<select name='noiseFilterPassType' id='noiseFilterPassType'>
-				<option> highpass </option>
-				<option> lowpass </option>
-			</select>
-			
-			<br />
-		</div>
+		<p> comments: </p>
+		<textarea id='comments' rows='10' cols='35'></textarea>
 		
 		<br />
 		<br />
@@ -90,68 +69,25 @@
 		"C": 261.63,
 	};
 	
-	/*
-	let state = {
-		'waveOscVolume1': 0.08,
-		'waveOscType1': 'square',
-		'noiseOscVolume1': 0.1,
-		'noiseBufPassType1': 'highpass',
-		'noiseOscFreq1': 1800,
-	};
-	*/
-	
-	let waveNode1 = {
-		'waveOscVolume1': 0.08,
-		'waveOscType1': 'square',
-	};
-	
-	let noiseNode1 = {
-		'noiseOscVolume1': 0.1,
-		'noiseBufPassType1': 'highpass',
-		'noiseOscFreq1': 1800,
-	};
-	
-	
 	let preset1 = {
 		'presetName': 'preset1',
 		'numWaveNodes': 0,//1,
 		'numNoiseNodes': 1,
-		'waveNodes': [
-			//waveNode1
-		],
-		'noiseNodes': [
-			noiseNode1
-		],
+		'waveNodes': [],
+		'noiseNodes': [],
 		"comments": "this is neat"
 	};
-	//console.log(preset1);
 	
 	let currPreset = preset1;
 	
 	
-	document.getElementById('noiseOscVolume').addEventListener('input', (evt) => {
-		noiseNode1.noiseOscVolume1 = evt.target.valueAsNumber;
-		document.getElementById('noiseVolValue').innerHTML = evt.target.valueAsNumber;
-	});
-	
-	document.getElementById('noiseOscFreq').addEventListener('input', (evt) => {
-		noiseNode1.noiseOscFreq1 = evt.target.valueAsNumber;
-		document.getElementById('noiseOscFreqValue').innerHTML = evt.target.valueAsNumber;
-	});
-	
-	document.getElementById('noiseFilterPassType').addEventListener('change', (evt) => {
-		noiseNode1.noiseBufPassType1 = evt.target.value;
-	});
-
 	///////////////////////////////////  START
 	let audioContext = new AudioContext();
 	audioContext.suspend();
 
 	let notes = [...document.getElementsByClassName("note")];
 	notes.forEach((note) => {
-		//console.log(note);
 		note.addEventListener('click', (event) => {
-			//console.log(event.toElement);
 			audioContext.resume().then(() => {
 				processNote(event.toElement.innerHTML, audioContext, currPreset);
 			});
@@ -167,10 +103,10 @@
 			let snap = addWaveNode(node, audioContext);
 			let snapOsc = snap[0];
 			let snapEnv = snap[1];
-			let volume = node['waveOscVolume1'];
+			let volume = node['waveOscVolume'];
 			
 			snapOsc.frequency.setValueAtTime(NOTE_FREQ[note], time);
-			snapEnv.gain.setValueAtTime(node['waveOscVolume1'], time);
+			snapEnv.gain.setValueAtTime(node['waveOscVolume'], time);
 			allNodes.push(snapOsc);
 		});
 		
@@ -178,7 +114,7 @@
 			let noise = addNoise(node, audioContext);
 			let noiseOsc = noise[0];
 			let noiseEnv = noise[1];
-			let volume = node['noiseOscVolume1'];
+			let volume = node['noiseOscVolume'];
 			
 			noiseEnv.gain.setValueAtTime(volume, time);
 			allNodes.push(noiseOsc);
@@ -190,6 +126,9 @@
 		});
 	}
 	/////////////////////////////////////////
+	function getAlphaString(str){
+		return str.match(/[a-zA-Z]+/g)[0];
+	}
 	
 	// you can start a buffer source like an oscillator!
 	function addNoise(noiseNodeParams, audioContext){
@@ -206,8 +145,8 @@
 		let noise = audioContext.createBufferSource();
 		noise.buffer = this.noiseBuffer;
 		let noiseFilter = audioContext.createBiquadFilter();
-		noiseFilter.type = noiseNodeParams['noiseBufPassType1'];
-		noiseFilter.frequency.value = noiseNodeParams['noiseOscFreq1']; //1800;
+		noiseFilter.type = noiseNodeParams['noiseFilterPassType'];
+		noiseFilter.frequency.value = noiseNodeParams['noiseOscFreq'];
 		noise.connect(noiseFilter);
 
 		// add gain to the noise filter 
@@ -219,7 +158,7 @@
 	
 	function addWaveNode(waveNodeParams, audioContext){
 		let snapOsc = audioContext.createOscillator();
-		snapOsc.type = waveNodeParams['waveOscType1'];
+		snapOsc.type = waveNodeParams['waveOscType'];
 		
 		let snapOscEnv = audioContext.createGain();
 		snapOsc.connect(snapOscEnv);
@@ -300,12 +239,12 @@
 		
 		// add event listeners for input and select
 		input.addEventListener('input', (evt) => {
-			newNodeParams[input.id] = evt.target.valueAsNumber;
+			newNodeParams[getAlphaString(input.id)] = evt.target.valueAsNumber;
 			volumeValue.innerHTML = evt.target.valueAsNumber;
 		});
 	
 		select.addEventListener('change', (evt) => {
-			newNodeParams[select.id] = evt.target.value;
+			newNodeParams[getAlphaString(select.id)] = evt.target.value;
 		});
 		
 		// put it all together
@@ -322,19 +261,127 @@
 		let parent = document.getElementById(parentElement);
 		parent.insertBefore(newWaveNodeDiv, parent.firstChild);
 		
-		newNodeParams[input.id] = 0.08;
-		newNodeParams[select.id] = 'square';
+		newNodeParams[getAlphaString(input.id)] = 0.08;
+		newNodeParams[getAlphaString(select.id)] = 'square';
 		
 		currPreset.numWaveNodes += 1;
 		currPreset.waveNodes.push(newNodeParams);
 	}
 	
 	function createNewNoiseOsc(parentElement){
+
 		// create a new noise section in html 
+		let newNodeParams = {};
+		
+		let newIdNum = currPreset.numNoiseNodes + 1;
+		let newNoiseNodeDiv = document.createElement('div');
+		newNoiseNodeDiv.id = 'noiseNode' + newIdNum;
+		newNoiseNodeDiv.className = 'noiseNode';
+		
+		let h3 = document.createElement('h3');
+		h3.innerHTML = 'noise node ' + newIdNum;
+		
+		let input = document.createElement('input');
+		input.setAttribute('name', 'noiseOscVolume' + newIdNum);
+		input.setAttribute('id', 'noiseOscVolume' + newIdNum);
+		input.setAttribute('type', 'range');
+		input.setAttribute('max', 1);
+		input.setAttribute('min', 0.1);
+		input.setAttribute('step', 0.01);
+		input.setAttribute('value', 0.1);
+		
+		let volumeValue = document.createElement('p');
+		volumeValue.id = 'noiseNodeVolValue' + newIdNum;
+		volumeValue.innerHTML = input.value;
+		
+		let label = document.createElement('label');
+		label.innerHTML = 'noise osc vol: ';
+		label.setAttribute('for', 'noiseOscVolume' + newIdNum);
+		
+		let brElement1 = document.createElement('br');
+		let brElement2 = document.createElement('br');
+		let brElement3 = document.createElement('br');
+		
+		let freqInput = document.createElement('input');
+		freqInput.setAttribute('name', 'noiseOscFreq' + newIdNum);
+		freqInput.setAttribute('id', 'noiseOscFreq' + newIdNum);
+		freqInput.setAttribute('type', 'range');
+		freqInput.setAttribute('max', 5000);
+		freqInput.setAttribute('min', 1000);
+		freqInput.setAttribute('step', 100);
+		freqInput.setAttribute('value', 1800);
+		
+		let freqInputLabel = document.createElement('label');
+		freqInputLabel.innerHTML = 'noise osc freq: ';
+		freqInputLabel.setAttribute('for', 'noiseOscFreq' + newIdNum);
+		
+		let freqValue = document.createElement('p');
+		freqValue.id = 'noiseOscFreqValue' + newIdNum;
+		freqValue.innerHTML = freqInput.value;
+		
+		let select = document.createElement('select');
+		select.setAttribute('name', 'noiseFilterPassType' + newIdNum);
+		select.id = 'noiseFilterPassType' + newIdNum;
+		
+		let filterOptions = [
+			'highpass',
+			'lowpass'
+		];
+		
+		filterOptions.forEach((opt) => {
+			let newOption = document.createElement('option');
+			newOption.innerHTML = opt;
+			select.appendChild(newOption);
+		});
+		
+		let selectLabel = document.createElement('label');
+		selectLabel.innerHTML = 'noise filter pass type: ';
+		selectLabel.setAttribute('for', 'noiseFilterPassType' + newIdNum);
+		
+		// add event listeners for input and select
+		input.addEventListener('input', (evt) => {
+			newNodeParams[getAlphaString(input.id)] = evt.target.valueAsNumber;
+			volumeValue.innerHTML = evt.target.valueAsNumber;
+		});
+		
+		freqInput.addEventListener('input', (evt) => {
+			newNodeParams[getAlphaString(freqInput.id)] = evt.target.valueAsNumber;
+			freqValue.innerHTML = evt.target.valueAsNumber;
+		});
+	
+		select.addEventListener('change', (evt) => {
+			newNodeParams[getAlphaString(select.id)] = evt.target.value;
+		});
+		
+		// put it all together
+		newNoiseNodeDiv.appendChild(h3);
+		newNoiseNodeDiv.appendChild(label);
+		newNoiseNodeDiv.appendChild(input);
+		newNoiseNodeDiv.appendChild(volumeValue);
+		newNoiseNodeDiv.appendChild(brElement1);
+		newNoiseNodeDiv.appendChild(freqInputLabel);
+		newNoiseNodeDiv.appendChild(freqInput);
+		newNoiseNodeDiv.appendChild(freqValue);
+		newNoiseNodeDiv.appendChild(brElement2);
+		newNoiseNodeDiv.appendChild(selectLabel);
+		newNoiseNodeDiv.appendChild(select);
+		newNoiseNodeDiv.appendChild(brElement3);
+		
+		// TODO: don't need this after dynamic noise node creation implemented?
+		let parent = document.getElementById(parentElement);
+		parent.insertBefore(newNoiseNodeDiv, parent.firstChild);
+		
+		newNodeParams[getAlphaString(input.id)] = 0.1;
+		newNodeParams[getAlphaString(select.id)] = 'highpass';
+		newNodeParams[getAlphaString(freqInput.id)] = 1800;
+		
+		currPreset.numNoiseNodes += 1;
+		currPreset.noiseNodes.push(newNodeParams);
 	}
 	
 	
 	createNewWavOsc('instrumentPreset1');
+	createNewNoiseOsc('instrumentPreset1');
 	
 	document.getElementById('instrumentPresetDownload').addEventListener('click', () => {
 		downloadPreset();
