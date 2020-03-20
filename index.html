@@ -5,7 +5,7 @@
 <head>
 	<title> web audio api custom sounds </title>
 	<style>
-		td{
+		td {
 			border: #000 solid 1px;
 			font-size: 50px;
 			font-family: monospace;
@@ -21,7 +21,7 @@
 </head>
 
 <body>
-	<p> make sounds </p>
+	<p> make sounds - click on a square to play a note</p>
 	<table>
 		<tr>
 			<td class='note' id='a'>A</td>
@@ -35,20 +35,27 @@
 	</table>
 	<hr />
 	
-	<div class='preset' id='instrumentPreset1'>
+	<div class='preset' id='instrumentPreset'>
+	
+		<hr />
+		<br />
+		<!--
+		<p> preset name: </p>
+		<input type='text' id='name'></input>
 		
 		<br />
 		<br />
+		-->
 		
-		<p> comments: </p>
-		<textarea id='comments' rows='10' cols='35'></textarea>
+		<p> notes: </p>
+		<textarea id='notes' rows='10' cols='35'></textarea>
 		
 		<br />
 		<br />
 		
 		<hr />
-		<button> add new wave osc </button>
-		<button> add new noise osc </button>
+		<button id='addNewWavNode'> add new wave osc </button>
+		<button id='addNewNoiseNode'> add new noise osc </button>
 		<button id='instrumentPresetImport'> import preset as .json </button>
 		<button id='instrumentPresetDownload'> download preset as .json </button>
 	</div>
@@ -69,17 +76,14 @@
 		"C": 261.63,
 	};
 	
-	let preset1 = {
+	let currPreset = {
 		'presetName': 'preset1',
-		'numWaveNodes': 0,//1,
-		'numNoiseNodes': 1,
+		'numWaveNodes': 0,
+		'numNoiseNodes': 0,
 		'waveNodes': [],
 		'noiseNodes': [],
-		"comments": "this is neat"
+		"notes": ""
 	};
-	
-	let currPreset = preset1;
-	
 	
 	///////////////////////////////////  START
 	let audioContext = new AudioContext();
@@ -130,6 +134,36 @@
 		return str.match(/[a-zA-Z]+/g)[0];
 	}
 	
+	// import preset 
+	function importInstrumentPreset(){
+		let input = document.getElementById('importInstrumentPresetInput');
+		input.addEventListener('change', processInstrumentPreset, false);
+		input.click();
+	}
+
+	function processInstrumentPreset(e){
+		let reader = new FileReader();
+		let file = e.target.files[0];
+		
+		//when the image loads, put it on the canvas.
+		reader.onload = (function(theFile){
+		
+			return function(e){
+			
+				// parse JSON using JSON.parse 
+				let data = JSON.parse(e.target.result);
+				let presetName = data['presetName'];
+	
+				// store the preset in the PianoRoll obj 
+				pianoRoll.instrumentPresets[presetName] = data;
+			}
+		})(file);
+
+		//read the file as a URL
+		reader.readAsText(file);
+	}
+
+	
 	// you can start a buffer source like an oscillator!
 	function addNoise(noiseNodeParams, audioContext){
 	
@@ -173,6 +207,9 @@
 			return;
 		}
 		
+		currPreset["presetName"] = fileName;
+		currPreset["notes"] = document.getElementById('notes').value;
+		
 		let blob = new Blob([JSON.stringify(currPreset, null, 2)], {type: "application/json"});
 		//make a url for that blob
 		let url = URL.createObjectURL(blob);
@@ -193,6 +230,9 @@
 		let newWaveNodeDiv = document.createElement('div');
 		newWaveNodeDiv.id = 'waveNode' + newIdNum;
 		newWaveNodeDiv.className = 'waveNode';
+		newWaveNodeDiv.style.border = "1px solid #000";
+		newWaveNodeDiv.style.marginBottom = "5px";
+		newWaveNodeDiv.style.padding = "5px";
 		
 		let h3 = document.createElement('h3');
 		h3.innerHTML = 'wave node ' + newIdNum;
@@ -202,7 +242,7 @@
 		input.setAttribute('id', 'waveOscVolume' + newIdNum);
 		input.setAttribute('type', 'range');
 		input.setAttribute('max', 0.8);
-		input.setAttribute('min', 0.05);
+		input.setAttribute('min', 0.0);
 		input.setAttribute('step', 0.01);
 		input.setAttribute('value', 0.08);
 		
@@ -277,6 +317,9 @@
 		let newNoiseNodeDiv = document.createElement('div');
 		newNoiseNodeDiv.id = 'noiseNode' + newIdNum;
 		newNoiseNodeDiv.className = 'noiseNode';
+		newNoiseNodeDiv.style.border = "1px solid #000";
+		newNoiseNodeDiv.style.marginBottom = "5px";
+		newNoiseNodeDiv.style.padding = "5px";
 		
 		let h3 = document.createElement('h3');
 		h3.innerHTML = 'noise node ' + newIdNum;
@@ -286,7 +329,7 @@
 		input.setAttribute('id', 'noiseOscVolume' + newIdNum);
 		input.setAttribute('type', 'range');
 		input.setAttribute('max', 1);
-		input.setAttribute('min', 0.1);
+		input.setAttribute('min', 0.0);
 		input.setAttribute('step', 0.01);
 		input.setAttribute('value', 0.1);
 		
@@ -307,7 +350,7 @@
 		freqInput.setAttribute('id', 'noiseOscFreq' + newIdNum);
 		freqInput.setAttribute('type', 'range');
 		freqInput.setAttribute('max', 5000);
-		freqInput.setAttribute('min', 1000);
+		freqInput.setAttribute('min', 500);
 		freqInput.setAttribute('step', 100);
 		freqInput.setAttribute('value', 1800);
 		
@@ -379,12 +422,20 @@
 		currPreset.noiseNodes.push(newNodeParams);
 	}
 	
-	
-	createNewWavOsc('instrumentPreset1');
-	createNewNoiseOsc('instrumentPreset1');
+	// create initial nodes
+	createNewWavOsc('instrumentPreset');
+	createNewNoiseOsc('instrumentPreset');
 	
 	document.getElementById('instrumentPresetDownload').addEventListener('click', () => {
 		downloadPreset();
+	});
+	
+	document.getElementById('addNewWavNode').addEventListener('click', () => {
+		createNewWavOsc('instrumentPreset');
+	});
+
+	document.getElementById('addNewNoiseNode').addEventListener('click', () => {
+		createNewNoiseOsc('instrumentPreset');
 	});
 
 </script>
