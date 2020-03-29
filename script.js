@@ -40,8 +40,9 @@ function processNote(note, audioContext, currPreset){
 		let snapOsc = snap[0];
 		let snapEnv = snap[1];
 		let volume = node['waveOscVolume'];
-		
+
 		snapOsc.frequency.setValueAtTime(NOTE_FREQ[note], time);
+		snapOsc.detune.setValueAtTime(node['waveOscDetune'], time);
 		snapEnv.gain.setValueAtTime(node['waveOscVolume'], time);
 		allNodes.push(snapOsc);
 	});
@@ -215,16 +216,17 @@ function createNewWavOsc(parentElement){
 	let h3 = document.createElement('h3');
 	h3.innerHTML = 'wave node ' + newIdNum;
 	
+	// input for volume
 	let input = document.createElement('input');
 	input.setAttribute('name', 'waveOscVolume' + newIdNum);
 	input.setAttribute('id', 'waveOscVolume' + newIdNum);
 	input.setAttribute('type', 'range');
-	input.setAttribute('max', 0.8);
+	input.setAttribute('max', 0.5);
 	input.setAttribute('min', 0.0);
 	input.setAttribute('step', 0.01);
 	input.setAttribute('value', 0.08);
 	
-	let volumeValue = document.createElement('p');
+	let volumeValue = document.createElement('label');
 	volumeValue.id = 'waveNodeVolValue' + newIdNum;
 	volumeValue.innerHTML = input.value;
 	
@@ -232,9 +234,29 @@ function createNewWavOsc(parentElement){
 	label.innerHTML = 'wav osc vol: ';
 	label.setAttribute('for', 'waveOscVolume' + newIdNum);
 	
+	// input for detune
+	let detuneInput = document.createElement('input');
+	detuneInput.setAttribute('name', 'waveOscDetune' + newIdNum);
+	detuneInput.setAttribute('id', 'waveOscDetune' + newIdNum);
+	detuneInput.setAttribute('type', 'range');
+	detuneInput.setAttribute('max', 100);
+	detuneInput.setAttribute('min', -100);
+	detuneInput.setAttribute('step', 1);
+	detuneInput.setAttribute('value', 0);
+	
+	let detuneValue = document.createElement('label');
+	detuneValue.id = 'waveNodeDetuneValue' + newIdNum;
+	detuneValue.innerHTML = detuneInput.value;
+	
+	let detuneLabel = document.createElement('label');
+	detuneLabel.innerHTML = 'wav osc detune: ';
+	detuneLabel.setAttribute('for', 'waveOscDetune' + newIdNum);
+	
 	let brElement1 = document.createElement('br');
 	let brElement2 = document.createElement('br');
+	let brElement3 = document.createElement('br');
 	
+	// select for oscillator wave type 
 	let select = document.createElement('select');
 	select.setAttribute('name', 'waveOscType' + newIdNum);
 	select.id = 'waveOscType' + newIdNum;
@@ -260,6 +282,11 @@ function createNewWavOsc(parentElement){
 		newNodeParams[getAlphaString(input.id)] = evt.target.valueAsNumber;
 		volumeValue.innerHTML = evt.target.valueAsNumber;
 	});
+	
+	detuneInput.addEventListener('input', (evt) => {
+		newNodeParams[getAlphaString(detuneInput.id)] = evt.target.valueAsNumber;
+		detuneValue.innerHTML = evt.target.valueAsNumber;		
+	});
 
 	select.addEventListener('change', (evt) => {
 		newNodeParams[getAlphaString(select.id)] = evt.target.value;
@@ -267,19 +294,28 @@ function createNewWavOsc(parentElement){
 	
 	// put it all together
 	newWaveNodeDiv.appendChild(h3);
+	
 	newWaveNodeDiv.appendChild(label);
 	newWaveNodeDiv.appendChild(input);
 	newWaveNodeDiv.appendChild(volumeValue);
+	newWaveNodeDiv.appendChild(brElement2);
+	
+	newWaveNodeDiv.appendChild(detuneLabel);
+	newWaveNodeDiv.appendChild(detuneInput);
+	newWaveNodeDiv.appendChild(detuneValue);
+	newWaveNodeDiv.appendChild(brElement3);
+	
 	newWaveNodeDiv.appendChild(brElement1);
 	newWaveNodeDiv.appendChild(selectLabel);
 	newWaveNodeDiv.appendChild(select);
-	newWaveNodeDiv.appendChild(brElement2);
 	
 	// TODO: don't need this after dynamic noise node creation implemented?
 	let parent = document.getElementById(parentElement);
 	parent.insertBefore(newWaveNodeDiv, parent.firstChild);
 	
+	// add all attributes of node to object
 	newNodeParams[getAlphaString(input.id)] = 0.08;
+	newNodeParams[getAlphaString(detuneInput.id)] = 0;
 	newNodeParams[getAlphaString(select.id)] = 'square';
 	
 	currPreset.numWaveNodes += 1;
@@ -306,12 +342,12 @@ function createNewNoiseOsc(parentElement){
 	input.setAttribute('name', 'noiseOscVolume' + newIdNum);
 	input.setAttribute('id', 'noiseOscVolume' + newIdNum);
 	input.setAttribute('type', 'range');
-	input.setAttribute('max', 1);
+	input.setAttribute('max', 0.2);
 	input.setAttribute('min', 0.0);
 	input.setAttribute('step', 0.01);
 	input.setAttribute('value', 0.1);
 	
-	let volumeValue = document.createElement('p');
+	let volumeValue = document.createElement('label');
 	volumeValue.id = 'noiseNodeVolValue' + newIdNum;
 	volumeValue.innerHTML = input.value;
 	
@@ -336,7 +372,7 @@ function createNewNoiseOsc(parentElement){
 	freqInputLabel.innerHTML = 'noise osc freq: ';
 	freqInputLabel.setAttribute('for', 'noiseOscFreq' + newIdNum);
 	
-	let freqValue = document.createElement('p');
+	let freqValue = document.createElement('label');
 	freqValue.id = 'noiseOscFreqValue' + newIdNum;
 	freqValue.innerHTML = freqInput.value;
 	
