@@ -97,10 +97,13 @@ function processInstrumentPreset(e){
 }
 
 
-// you can start a buffer source like an oscillator!
-function addNoise(noiseNodeParams, audioContext){
 
-	// this stuff should be customizable
+// you can start a buffer source like an oscillator!
+function addNoiseNode(noiseNodeParams, audioContext){
+
+	let noise = audioContext.createBufferSource();
+	
+	// assign random noise first, but let it be customizable
 	let bufSize = audioContext.sampleRate;
 	let buffer = audioContext.createBuffer(1, bufSize, bufSize);
 	let output = buffer.getChannelData(0);
@@ -108,34 +111,20 @@ function addNoise(noiseNodeParams, audioContext){
 		output[i] = Math.random() * 2 - 1;
 	}
 	
-	this.noiseBuffer = buffer;
-	let noise = audioContext.createBufferSource();
-	noise.buffer = this.noiseBuffer;
-	let noiseFilter = audioContext.createBiquadFilter();
-	noiseFilter.type = noiseNodeParams['noiseFilterPassType'];
-	noiseFilter.frequency.value = noiseNodeParams['noiseOscFreq'];
+	noise.buffer = buffer;
+	
+	// note that the filter has its own gain value.
+	// increase filter gain == stronger filter
+	let noiseFilter = createBiquadFilterNode(audioContext);
 	noise.connect(noiseFilter);
 
-	// add gain to the noise filter 
-	let noiseEnvelope = audioContext.createGain();
-	noiseFilter.connect(noiseEnvelope);
-	noiseEnvelope.connect(audioContext.destination);
-	return [noise, noiseEnvelope];
+	// add gain (for volume) to the noise filter 
+	let noiseVolume = audioContext.createGain();
+	noiseFilter.connect(noiseVolume);
+	noiseVolume.connect(audioContext.destination);
+	return [noise, noiseVolume];
 }
 
-// should set it with default params, then let the user change them after clicking on the note in the UI
-// should have another function that creates the node in the backend, and also the corresponding UI element.
-// clicking on that element will open up a menu to allow the user to change parameters.
-function addWaveNode(waveNodeParams, audioContext){
-	let snapOsc = audioContext.createOscillator();
-	snapOsc.type = waveNodeParams['waveOscType'];
-	
-	let snapOscEnv = audioContext.createGain();
-	snapOsc.connect(snapOscEnv);
-	snapOscEnv.connect(audioContext.destination);
-	
-	return [snapOsc, snapOscEnv];
-}
 
 function downloadPreset(){
 	let fileName = prompt("enter filename");
@@ -203,6 +192,116 @@ function processInstrumentPreset(e){
 }
 
 
+function toggleNodeMenu(node){
+	// for a node passed in 
+	// get the customizable attributes 
+	// and display them 
+	
+}
+
+
+class NodeFactory extends AudioContext {
+	// create your new nodes with these functions
+	constructor(){
+		this.audioContext = new AudioContext();
+		this.nodeStore = {};  // store refs for nodes
+		this.nodeCounts = {
+			'addWaveNode': function(node){
+				if(this.wavNodeCount){
+					this.waveNodeCount++;
+				}else{
+					this.waveNodeCount = 1;
+				}
+			}
+			
+		}; // keep track of count of each unique node for id creation
+	}
+	
+	// store a node in this.nodeStore
+	_storeNode(node, nodeName){
+		this.nodeStore[nodeName] = {'node': node, 'feedsInto': null};
+	}
+	
+	// methods for node creation. I'm thinking of them as 'private' methods because
+	// they'll be used in other methods that are more useful and should be called on a NodeFactory instance
+	_createWaveNode(){
+		// should set it with default params, then let the user change them after clicking on the note in the UI
+		// should have another function that creates the node in the backend, and also the corresponding UI element.
+		// clicking on that element will open up a menu to allow the user to change parameters.
+		let osc = this.audioContext.createOscillator();
+		// default params 
+		osc.frequency = 440; // A @ 440 Hz
+		osc.detune.value = 0;
+		osc.type = "sine";
+		this.nodeCounts.addWaveNode(osc); // increment existing quantity of this node
+		return osc;
+	}
+	
+	// create a biquadfilter node
+	_createBiquadFilterNode(){
+		let bqFilterNode = this.audioContext.createBiquadFilter();
+		bqFilterNode.frequency.value = 440;
+		bqFilterNode.detune.value = 0;
+		bqFilterNode.Q.value = 1;
+		bqFilterNode.gain.value = 0;
+		bqFilterNode.type = "lowpass";
+		
+		// need to add to nodeCounts
+		
+		return bqFilterNode;
+	}
+	
+	_addNodeToInterface(nodeUIElement){
+		// place randomly in designated area?
+	}
+	
+	_createNodeUIElement(node){
+		// add event listener to allow it to be hooked up to another node if possible
+	}
+	
+	// create and add a new wave node to the interface 
+	// http://blog.greggant.com/posts/2018/10/16/drawing-svg-lines-between-multiple-dom-objects.html
+	addNewNode(nodeType, addToInterface=true){
+		
+		// create the node object
+		let newNode = null;
+		
+		if(nodeType === "waveNode"){
+			newNode = _createWaveNode();
+		}else if(nodeType === "biquadFilterNode"){
+		}
+		
+		// store it 
+		_storeNode(newNode, (nodeType + this.nodeCounts[(nodeType + "Count")]));
+		
+		// this should be a separate function
+		if(addToInterface){
+			// add it visually to the UI 
+			// add event listeners to the UI
+		}
+	}
+	
+}
+
+// maybe move all the UI handling stuff to another class that will be comprised of the nodefactory class?
+class SoundMaker {
+
+	constructor(){
+		this.nodeFactory = new NodeFactory();
+	}
+
+
+}
+
+
+
+function setElementAttributes(element, dict){
+	for(let attr in dict){
+		element.setAttribute(attr, dict[attr]);
+	}
+}
+
+
 
 function createNewWavOsc(parentElement){
 	// create a new wave osc section in html 
@@ -221,13 +320,18 @@ function createNewWavOsc(parentElement){
 	
 	// input for volume
 	let input = document.createElement('input');
-	input.setAttribute('name', 'waveOscVolume' + newIdNum);
-	input.setAttribute('id', 'waveOscVolume' + newIdNum);
-	input.setAttribute('type', 'range');
-	input.setAttribute('max', 0.5);
-	input.setAttribute('min', 0.0);
-	input.setAttribute('step', 0.01);
-	input.setAttribute('value', 0.08);
+	setElementAttributes(
+		input,
+		{
+			'name': ('waveOscVolume' + newIdNum),
+			'id': ('waveOscVolume' + newIdNum),
+			'type': 'range',
+			'max': 0.5,
+			'min': 0.0,
+			'step': 0.01,
+			'value': 0.08
+		}
+	);
 	
 	let volumeValue = document.createElement('label');
 	volumeValue.id = 'waveNodeVolValue' + newIdNum;
