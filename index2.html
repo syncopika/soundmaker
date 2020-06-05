@@ -1,0 +1,59 @@
+<!doctype html>
+
+<html>
+
+<head>
+	<title> web audio api custom sounds </title>
+	<style>
+		td {
+			border: #000 solid 1px;
+			font-size: 50px;
+			font-family: monospace;
+		}
+		.note:hover {
+			background-color: #7FFF00;
+		}
+		.preset {
+			border-left: 1px solid #000;
+			padding-left: 1%;
+		}
+	</style>
+</head>
+
+<body>
+	<p> make sounds - click on a rectangle to play a note</p>
+	<p><b> to use this preset, download it and import it into my piano roll app <a href='https://syncopika.github.io/piano_roll_browser/'>here</a>!</b></p>
+	<table>
+		<tr>
+			<td class='note' id='a'>A</td>
+			<td class='note' id='b'>B</td>
+			<td class='note' id='c'>C</td>
+			<td class='note' id='d'>D</td>			
+			<td class='note' id='e'>E</td>
+			<td class='note' id='f'>F</td>			
+			<td class='note' id='g'>G</td>
+		</tr>
+	</table>
+	<hr />
+	
+	<button id='addWavNode'>
+		Add a new wave node
+	</button>
+	
+	<button id='addGainNode'>
+		Add a new gain node
+	</button>
+	
+	<button id='addNoiseNode'>
+		Add a new noise node
+	</button>
+	
+	<button id='addFilterNode'>
+		Add a new filter node
+	</button>
+	
+</body>
+
+</html>
+
+<script src='script2.js'></script>
