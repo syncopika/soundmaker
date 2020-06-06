@@ -183,7 +183,6 @@ class NodeFactory extends AudioContext {
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
 			'addNode': function(node){
-				
 				let nodeType = node.constructor.name;
 				
 				// just keeping count here
@@ -197,6 +196,9 @@ class NodeFactory extends AudioContext {
 			},
 			
 			'deleteNode': function(node){
+				let nodeType = node.constructor.name;
+				this[nodeType]--;
+				return this[nodeType];
 			}
 			
 		}; // keep track of count of each unique node for id creation
@@ -204,17 +206,11 @@ class NodeFactory extends AudioContext {
 	
 	// store a node in this.nodeStore
 	_storeNode(node, nodeName){
-		this.nodeStore[nodeName] = {'node': node, 'feedsInto': null};
-	}
-	
-	_deleteNode(nodeName){
-		delete this.nodeStore[nodeName];
-		
-		// decrement count 
-		
-		// unhook all connections
-		
-		// clear UI
+		// feedsInto would be an array of strings, where each string is a node's name
+		this.nodeStore[nodeName] = {
+			'node': node, 
+			'feedsInto': null
+		};
 	}
 	
 	// methods for node creation. I'm thinking of them as 'private' methods because
@@ -233,9 +229,8 @@ class NodeFactory extends AudioContext {
 	}
 	
 	_createNoiseNode(){
-	
 		// allow user to pass in the contents of the noise buffer as a list if they want to?
-		let noise = audioContext.createBufferSource();
+		let noise = this.audioContext.createBufferSource();
 		
 		// assign random noise first, but let it be customizable
 		let bufSize = audioContext.sampleRate; // customizable?
@@ -250,17 +245,6 @@ class NodeFactory extends AudioContext {
 		
 		noise.id = (noise.constructor.name + this.nodeCounts.addNode(noise));
 		return noise;
-		
-		// note that the filter has its own gain value.
-		// increase filter gain == stronger filter
-		//let noiseFilter = createBiquadFilterNode(audioContext);
-		//noise.connect(noiseFilter);
-
-		// add gain (for volume) to the noise filter 
-		//let noiseVolume = audioContext.createGain();
-		//noiseFilter.connect(noiseVolume);
-		//noiseVolume.connect(audioContext.destination);
-		//return [noise, noiseVolume];	
 	}
 	
 	_createGainNode(){
@@ -285,6 +269,32 @@ class NodeFactory extends AudioContext {
 		return bqFilterNode;
 	}
 	
+	_deleteNode(node){
+		let nodeName = node.id;
+		let nodeToDelete = this.nodeStore[nodeName].node;
+		
+		// decrement count 
+		this.nodeCounts.deleteNode(node);
+		
+		// unhook all connections in the UI
+		let connections = this.nodeStore[nodeName].feedsInto;
+		if(connections){
+			connections.forEach((connection) => {
+				// remove the UI representation of the connection
+				// as long as we don't keep references of node sources,
+				// we shouldn't have to do anything else with the feedsInto info.
+				// (i.e. source-to-sink. right now we just keep references to 
+				// the nodes (or sinks) a node feeds into.)
+			});
+		};
+		
+		// remove it 
+		delete this.nodeStore[nodeName];
+		
+		// clear UI
+		document.body.removeChild(document.getElementById(nodeName));
+	}
+	
 	_addNodeToInterface(node, x, y){
 		// place randomly in designated area?
 		let uiElement = this._createNodeUIElement(node);
@@ -304,8 +314,10 @@ class NodeFactory extends AudioContext {
 		uiElement.style.position = 'absolute';
 		uiElement.style.border = '1px solid #000';
 		uiElement.style.borderRadius = '20px 20px 20px 20px';
+		uiElement.style.padding = '5px';
 		uiElement.style.textAlign = 'center';
 		uiElement.classList.add("nodeElement");
+		uiElement.id = node.id;
 		
 		// https://javascript.info/mouse-drag-and-drop
 		uiElement.addEventListener("mousedown", (evt) => {
@@ -327,13 +339,15 @@ class NodeFactory extends AudioContext {
 			uiElement.addEventListener("mouseup", (evt) => {
 				document.removeEventListener("mousemove", moveNode);
 			});
-		
 		});
 		
+		// add the name of the node
 		let name = document.createElement('h4');
 		name.textContent = node.constructor.name;
 		uiElement.appendChild(name);
 	
+		// list customizable properties of this node 
+		// and add the appropriate elements to modify those properties
 		customizableProperties.forEach((prop) => {
 			let property = document.createElement('p');
 			property.textContent = prop;
@@ -341,10 +355,16 @@ class NodeFactory extends AudioContext {
 			uiElement.appendChild(property);
 		});
 		
+		// connect-to-other-nodes functionality 
+		let connectButton = document.createElement('button');
+		connectButton.textContent = "connect to another node";
+		uiElement.appendChild(connectButton);
+		
+		// delete node functionality
 		let deleteButton = document.createElement('button');
 		deleteButton.textContent = "delete";
 		deleteButton.addEventListener('click', (evt) => {
-			this._deleteNode(node.id);
+			this._deleteNode(node);
 		});
 		
 		uiElement.appendChild(deleteButton);
@@ -387,11 +407,9 @@ class NodeFactory extends AudioContext {
 
 // maybe move all the UI handling stuff to another class that will be comprised of the nodefactory class?
 class SoundMaker {
-	
 	constructor(){
 		this.nodeFactory = new NodeFactory();
 	}
-	
 }
 
 
@@ -412,3 +430,17 @@ document.getElementById('addFilterNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("biquadFilterNode");
 });
 
+
+
+///////// TESTS
+function Test1(){
+	let sm = new SoundMaker();
+	console.log(sm.nodeFactory !== undefined);
+	
+	let nf = sm.nodeFactory;
+	nf.addNewNode("waveNode", false); 
+	console.log(Object.keys(nf.nodeStore).length === 1);
+	console.log(Object.keys(nf.nodeStore)[0] === "OscillatorNode1");
+	console.log(nf.nodeCounts["OscillatorNode"] === 1);
+}
+//Test1();
