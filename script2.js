@@ -18,8 +18,6 @@ let currPreset = {
 };
 
 ///////////////////////////////////  START
-let audioContext = new AudioContext();
-audioContext.suspend();
 
 let notes = [...document.getElementsByClassName("note")];
 notes.forEach((note) => {
@@ -97,33 +95,6 @@ function processInstrumentPreset(e){
 }
 
 
-
-// you can start a buffer source like an oscillator!
-function addNoiseNode(noiseNodeParams, audioContext){
-
-	let noise = audioContext.createBufferSource();
-	
-	// assign random noise first, but let it be customizable
-	let bufSize = audioContext.sampleRate;
-	let buffer = audioContext.createBuffer(1, bufSize, bufSize);
-	let output = buffer.getChannelData(0);
-	for(let i = 0; i < bufSize; i++){
-		output[i] = Math.random() * 2 - 1;
-	}
-	
-	noise.buffer = buffer;
-	
-	// note that the filter has its own gain value.
-	// increase filter gain == stronger filter
-	let noiseFilter = createBiquadFilterNode(audioContext);
-	noise.connect(noiseFilter);
-
-	// add gain (for volume) to the noise filter 
-	let noiseVolume = audioContext.createGain();
-	noiseFilter.connect(noiseVolume);
-	noiseVolume.connect(audioContext.destination);
-	return [noise, noiseVolume];
-}
 
 
 function downloadPreset(){
@@ -204,17 +175,28 @@ class NodeFactory extends AudioContext {
 	// create your new nodes with these functions
 	constructor(){
 		super();
+		
 		this.audioContext = new AudioContext();
+		this.audioContext.suspend();
+		
 		this.nodeStore = {};  // store refs for nodes
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
 			'addNode': function(node){
+				
 				let nodeType = node.constructor.name;
+				
+				// just keeping count here
 				if(this[nodeType]){
 					this[nodeType]++;
 				}else{
 					this[nodeType] = 1;
 				}
+				
+				return this[nodeType];
+			},
+			
+			'deleteNode': function(node){
 			}
 			
 		}; // keep track of count of each unique node for id creation
@@ -223,6 +205,16 @@ class NodeFactory extends AudioContext {
 	// store a node in this.nodeStore
 	_storeNode(node, nodeName){
 		this.nodeStore[nodeName] = {'node': node, 'feedsInto': null};
+	}
+	
+	_deleteNode(nodeName){
+		delete this.nodeStore[nodeName];
+		
+		// decrement count 
+		
+		// unhook all connections
+		
+		// clear UI
 	}
 	
 	// methods for node creation. I'm thinking of them as 'private' methods because
@@ -236,7 +228,7 @@ class NodeFactory extends AudioContext {
 		osc.frequency.value = 440; // A @ 440 Hz
 		osc.detune.value = 0;
 		osc.type = "sine";
-		this.nodeCounts.addNode(osc); // increment existing quantity of this node
+		osc.id = (osc.constructor.name + this.nodeCounts.addNode(osc));
 		return osc;
 	}
 	
@@ -256,7 +248,7 @@ class NodeFactory extends AudioContext {
 		
 		noise.buffer = buffer;
 		
-		this.nodeCounts.addNode(noise);
+		noise.id = (noise.constructor.name + this.nodeCounts.addNode(noise));
 		return noise;
 		
 		// note that the filter has its own gain value.
@@ -273,9 +265,9 @@ class NodeFactory extends AudioContext {
 	
 	_createGainNode(){
 		let gainNode = this.audioContext.createGain();
-		this.nodeCounts.addNode(gainNode);
 		// gain will alwaays need to attach to context destination
 		gainNode.connect(this.audioContext.destination);
+		gainNode.id = (gainNode.constructor.name + this.nodeCounts.addNode(gainNode));
 		return gainNode;
 	}
 	
@@ -289,7 +281,7 @@ class NodeFactory extends AudioContext {
 		bqFilterNode.type = "lowpass";
 		
 		// need to add to nodeCounts
-		this.nodeCounts.addNode(bqFilterNode);
+		bqFilterNode.id = (bqFilterNode.constructor.name + this.nodeCounts.addNode(bqFilterNode));
 		return bqFilterNode;
 	}
 	
@@ -313,6 +305,30 @@ class NodeFactory extends AudioContext {
 		uiElement.style.border = '1px solid #000';
 		uiElement.style.borderRadius = '20px 20px 20px 20px';
 		uiElement.style.textAlign = 'center';
+		uiElement.classList.add("nodeElement");
+		
+		// https://javascript.info/mouse-drag-and-drop
+		uiElement.addEventListener("mousedown", (evt) => {
+			//uiElement.setAttribute("mousedown", true);
+			let offsetX = evt.clientX - uiElement.getBoundingClientRect().left;
+			let offsetY = evt.clientY - uiElement.getBoundingClientRect().top;
+	
+			function moveHelper(x, y){
+				uiElement.style.left = (x + 'px');
+				uiElement.style.top = (y + 'px');
+			}
+	
+			function moveNode(evt){
+				moveHelper((evt.pageX - offsetX), (evt.pageY - offsetY));
+			}
+			
+			document.addEventListener("mousemove", moveNode);
+			
+			uiElement.addEventListener("mouseup", (evt) => {
+				document.removeEventListener("mousemove", moveNode);
+			});
+		
+		});
 		
 		let name = document.createElement('h4');
 		name.textContent = node.constructor.name;
@@ -324,6 +340,14 @@ class NodeFactory extends AudioContext {
 			
 			uiElement.appendChild(property);
 		});
+		
+		let deleteButton = document.createElement('button');
+		deleteButton.textContent = "delete";
+		deleteButton.addEventListener('click', (evt) => {
+			this._deleteNode(node.id);
+		});
+		
+		uiElement.appendChild(deleteButton);
 		
 		return uiElement;
 	}
@@ -349,7 +373,7 @@ class NodeFactory extends AudioContext {
 		}
 		
 		// store it 
-		this._storeNode(newNode, (nodeType + this.nodeCounts[(nodeType + "Count")]));
+		this._storeNode(newNode, newNode.id);
 		
 		// this should be a separate function
 		if(addToInterface){
