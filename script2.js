@@ -200,8 +200,9 @@ class NodeFactory extends AudioContext {
 				this[nodeType]--;
 				return this[nodeType];
 			}
-			
 		}; // keep track of count of each unique node for id creation
+		
+		this.nodeColors = {}; // different background color for each kind of node element
 	}
 	
 	// store a node in this.nodeStore
@@ -233,8 +234,8 @@ class NodeFactory extends AudioContext {
 		let noise = this.audioContext.createBufferSource();
 		
 		// assign random noise first, but let it be customizable
-		let bufSize = audioContext.sampleRate; // customizable?
-		let buffer = audioContext.createBuffer(1, bufSize, bufSize);
+		let bufSize = this.audioContext.sampleRate; // customizable?
+		let buffer = this.audioContext.createBuffer(1, bufSize, bufSize);
 		
 		let output = buffer.getChannelData(0);
 		for(let i = 0; i < bufSize; i++){
@@ -242,7 +243,6 @@ class NodeFactory extends AudioContext {
 		}
 		
 		noise.buffer = buffer;
-		
 		noise.id = (noise.constructor.name + this.nodeCounts.addNode(noise));
 		return noise;
 	}
@@ -311,6 +311,8 @@ class NodeFactory extends AudioContext {
 		let uiElement = document.createElement('div');
 		//uiElement.style.width = '300px';
 		//uiElement.style.height = '210px';
+		uiElement.style.backgroundColor = "#fff";
+		uiElement.style.zIndex = 10;
 		uiElement.style.position = 'absolute';
 		uiElement.style.border = '1px solid #000';
 		uiElement.style.borderRadius = '20px 20px 20px 20px';
@@ -351,13 +353,67 @@ class NodeFactory extends AudioContext {
 		customizableProperties.forEach((prop) => {
 			let property = document.createElement('p');
 			property.textContent = prop;
-			
 			uiElement.appendChild(property);
 		});
 		
 		// connect-to-other-nodes functionality 
 		let connectButton = document.createElement('button');
 		connectButton.textContent = "connect to another node";
+		connectButton.addEventListener("click", (evt) => {
+			
+			function selectNodeToConnectHelper(evt, source, nodeStore){
+				// https://webhint.io/docs/user-guide/hints/hint-create-element-svg/
+				// https://stackoverflow.com/questions/41161094/dynamically-created-svg-elements-are-not-rendered-by-the-browser
+				//console.log("selected: " + evt.target.id);		
+				//console.log(source.id);
+				
+				evt.target.style.backgroundColor = "#fff";
+				
+				// update node's connections in nodeStore
+				
+				// update UI to show link between nodes
+				
+				[...Object.keys(nodeStore)].forEach((node) => {
+					if(node !== source.id){
+						let otherNode = document.getElementById(node);
+						otherNode.removeEventListener("mouseover", mouseoverNode);
+						otherNode.removeEventListener("mouseleave", mouseleaveNode);
+						otherNode.removeEventListener("click", selectNodeToConnectTo);
+					}
+				});
+			}
+			
+			let nodeStore = this.nodeStore;
+			function selectNodeToConnectTo(evt){
+				selectNodeToConnectHelper(evt, uiElement, nodeStore);
+			}
+			
+			function mouseoverNode(evt){
+				// highlight the node being hovered over
+				if(evt.target.classList.contains("nodeElement")){
+					evt.target.style.backgroundColor = "#ffcccc";
+				}
+			}
+			
+			function mouseleaveNode(evt){
+				if(evt.target.classList.contains("nodeElement")){
+					evt.target.style.backgroundColor = "#fff";
+				}
+			}
+			
+			// TODO: set up rules to determine which kinds of nodes this one can feed into!
+			// add an event listener for all node elements that this node could connect with 
+			[...Object.keys(nodeStore)].forEach((node) => {
+				if(node !== uiElement.id){			
+					let otherNode = document.getElementById(node);
+					otherNode.addEventListener("mouseover", mouseoverNode);
+					otherNode.addEventListener("mouseleave", mouseleaveNode);
+					otherNode.addEventListener("click", selectNodeToConnectTo);
+				}
+			})
+			
+			
+		});
 		uiElement.appendChild(connectButton);
 		
 		// delete node functionality
@@ -403,7 +459,7 @@ class NodeFactory extends AudioContext {
 		}
 	}
 	
-}
+} // end NodeFactory
 
 // maybe move all the UI handling stuff to another class that will be comprised of the nodefactory class?
 class SoundMaker {
@@ -429,7 +485,6 @@ document.getElementById('addNoiseNode').addEventListener('click', (e) => {
 document.getElementById('addFilterNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("biquadFilterNode");
 });
-
 
 
 ///////// TESTS
