@@ -1,0 +1,4 @@
+https://javascript.info/mouse-drag-and-drop
+http://blog.greggant.com/posts/2018/10/16/drawing-svg-lines-between-multiple-dom-objects.html
+https://webhint.io/docs/user-guide/hints/hint-create-element-svg/
+https://stackoverflow.com/questions/41161094/dynamically-created-svg-elements-are-not-rendered-by-the-browser

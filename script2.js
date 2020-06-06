@@ -23,43 +23,15 @@ let notes = [...document.getElementsByClassName("note")];
 notes.forEach((note) => {
 	note.addEventListener('click', (event) => {
 		audioContext.resume().then(() => {
-			processNote(event.toElement.innerHTML, audioContext, currPreset);
+			//processNote(event.toElement.innerHTML, audioContext, currPreset);
 		});
 	});
 });
 
 function processNote(note, audioContext, currPreset){
-	// play the given note based on the current synth setup
-	let allNodes = [];
-	let time = audioContext.currentTime;
-	
-	currPreset.waveNodes.forEach((node) => {
-		let snap = addWaveNode(node, audioContext);
-		let snapOsc = snap[0];
-		let snapEnv = snap[1];
-		let volume = node['waveOscVolume'];
-
-		snapOsc.frequency.setValueAtTime(NOTE_FREQ[note], time);
-		snapOsc.detune.setValueAtTime(node['waveOscDetune'], time);
-		snapEnv.gain.setValueAtTime(node['waveOscVolume'], time);
-		allNodes.push(snapOsc);
-	});
-	
-	currPreset.noiseNodes.forEach((node) => {
-		let noise = addNoise(node, audioContext);
-		let noiseOsc = noise[0];
-		let noiseEnv = noise[1];
-		let volume = node['noiseOscVolume'];
-		
-		noiseEnv.gain.setValueAtTime(volume, time);
-		allNodes.push(noiseOsc);
-	});
-	
-	allNodes.forEach((osc) => {
-		osc.start(0);
-		osc.stop(audioContext.currentTime + .100);
-	});
 }
+
+
 /////////////////////////////////////////
 function getAlphaString(str){
 	return str.match(/[a-zA-Z]+/g)[0];
@@ -133,28 +105,7 @@ function processInstrumentPreset(e){
 	reader.onload = (function(theFile){
 	
 		return function(e){
-		
 			let importedPreset = JSON.parse(e.target.result);
-			
-			// reset currPreset
-			currPreset = importedPreset;
-			// reset counts otherwise the labeling will be off 
-			currPreset['numWaveNodes'] = 0;
-			currPreset['numNoiseNodes'] = 0;
-			
-			let allWaveNodes = document.querySelectorAll('.waveNode');
-			let allNoiseNodes = document.querySelectorAll('.noiseNode');
-			
-			allWaveNodes.forEach((node)=>{node.parentNode.removeChild(node)});
-			allNoiseNodes.forEach((node)=>{node.parentNode.removeChild(node)});
-			
-			currPreset.waveNodes.forEach((node) => {
-				createNewWavOsc('instrumentPreset');
-			});
-			
-			currPreset.noiseNodes.forEach((node) => {
-				createNewNoiseOsc('instrumentPreset');
-			});
 		}
 	})(file);
 
@@ -163,16 +114,11 @@ function processInstrumentPreset(e){
 }
 
 
-function toggleNodeMenu(node){
-	// for a node passed in 
-	// get the customizable attributes 
-	// and display them 
-	
-}
-
-
 class NodeFactory extends AudioContext {
 	// create your new nodes with these functions
+	// NOTE THAT OSCILLATOR NODES CAN ONLY BE STARTED/STOPPED ONCE!
+	// when a note is played multiple times, each time a new oscillator needs to 
+	// be created. but we can save the properties of the oscillator and reuse that data.
 	constructor(){
 		super();
 		
@@ -269,6 +215,10 @@ class NodeFactory extends AudioContext {
 		return bqFilterNode;
 	}
 	
+	// attack, decay, sustain, release envelope node
+	_createADSREnvelopeNode(){
+	}
+	
 	_deleteNode(node){
 		let nodeName = node.id;
 		let nodeToDelete = this.nodeStore[nodeName].node;
@@ -321,7 +271,6 @@ class NodeFactory extends AudioContext {
 		uiElement.classList.add("nodeElement");
 		uiElement.id = node.id;
 		
-		// https://javascript.info/mouse-drag-and-drop
 		uiElement.addEventListener("mousedown", (evt) => {
 			//uiElement.setAttribute("mousedown", true);
 			let offsetX = evt.clientX - uiElement.getBoundingClientRect().left;
@@ -362,17 +311,20 @@ class NodeFactory extends AudioContext {
 		connectButton.addEventListener("click", (evt) => {
 			
 			function selectNodeToConnectHelper(evt, source, nodeStore){
-				// https://webhint.io/docs/user-guide/hints/hint-create-element-svg/
-				// https://stackoverflow.com/questions/41161094/dynamically-created-svg-elements-are-not-rendered-by-the-browser
-				//console.log("selected: " + evt.target.id);		
-				//console.log(source.id);
 				
-				evt.target.style.backgroundColor = "#fff";
+				//console.log(evt.target);
+				let target = evt.target;
+				if(!evt.target.classList.contains("nodeElement")){
+					target = evt.target.parentNode;
+				}
+				target.style.backgroundColor = "#fff";
 				
 				// update node's connections in nodeStore
 				
 				// update UI to show link between nodes
 				
+				// remove the event listeners needed to form the new connection 
+				// from all the nodes
 				[...Object.keys(nodeStore)].forEach((node) => {
 					if(node !== source.id){
 						let otherNode = document.getElementById(node);
@@ -428,8 +380,7 @@ class NodeFactory extends AudioContext {
 		return uiElement;
 	}
 	
-	// create and add a new wave node to the interface 
-	// http://blog.greggant.com/posts/2018/10/16/drawing-svg-lines-between-multiple-dom-objects.html
+	// create and add a new wave node to the interface
 	addNewNode(nodeType, addToInterface=true){
 		
 		// create the node object
