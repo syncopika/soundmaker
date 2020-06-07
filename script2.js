@@ -113,6 +113,33 @@ function processInstrumentPreset(e){
 	reader.readAsText(file);
 }
 
+function drawLineBetween(htmlElement1, htmlElement2){
+	let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	svg.style.position = "absolute";
+	svg.style.zIndex = 0;
+	svg.style.height = "100%";
+	svg.style.width = "100%";
+	
+	let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+	line.classList.add('line');
+	line.setAttribute('stroke', '#000');
+	line.setAttribute('stroke-width', '1px');
+	
+	
+	let element1x = htmlElement1.style.left;
+	let element1y = htmlElement1.style.top;
+	let element2x = htmlElement2.style.left;
+	let element2y = htmlElement2.style.top;
+	
+	line.setAttribute('x1', element1x);
+	line.setAttribute('y1', element1y);
+	line.setAttribute('x2', element2x);
+	line.setAttribute('y2', element2y);
+	
+	svg.appendChild(line);
+	document.getElementById('nodeArea').appendChild(svg);
+}
+
 
 class NodeFactory extends AudioContext {
 	// create your new nodes with these functions
@@ -230,9 +257,10 @@ class NodeFactory extends AudioContext {
 		let connections = this.nodeStore[nodeName].feedsInto;
 		if(connections){
 			connections.forEach((connection) => {
-				// remove the UI representation of the connection
+				// just remove the UI representation of the connection
 				// as long as we don't keep references of node sources,
-				// we shouldn't have to do anything else with the feedsInto info.
+				// we shouldn't have to do anything else with the feedsInto info cause
+				// that object will just get garbage-collected
 				// (i.e. source-to-sink. right now we just keep references to 
 				// the nodes (or sinks) a node feeds into.)
 			});
@@ -242,7 +270,7 @@ class NodeFactory extends AudioContext {
 		delete this.nodeStore[nodeName];
 		
 		// clear UI
-		document.body.removeChild(document.getElementById(nodeName));
+		document.getElementById('nodeArea').removeChild(document.getElementById(nodeName));
 	}
 	
 	_addNodeToInterface(node, x, y){
@@ -252,7 +280,7 @@ class NodeFactory extends AudioContext {
 		uiElement.style.top = x || '300px';
 		uiElement.style.left = y || '300px';
 		
-		document.body.appendChild(uiElement);
+		document.getElementById('nodeArea').appendChild(uiElement);
 	}
 	
 	_createNodeUIElement(node){
@@ -320,8 +348,16 @@ class NodeFactory extends AudioContext {
 				target.style.backgroundColor = "#fff";
 				
 				// update node's connections in nodeStore
+				// store the target, or the sink for this source, html id 
+				let connections = nodeStore[source.id];
+				if(connections["feedsInto"] === null){
+					connections["feedsInto"] = [target.id];
+				}else{
+					connections["feedsInto"].push(target.id);
+				}
 				
 				// update UI to show link between nodes
+				drawLineBetween(source, target);
 				
 				// remove the event listeners needed to form the new connection 
 				// from all the nodes
