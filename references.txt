@@ -2,3 +2,6 @@ https://javascript.info/mouse-drag-and-drop
 http://blog.greggant.com/posts/2018/10/16/drawing-svg-lines-between-multiple-dom-objects.html
 https://webhint.io/docs/user-guide/hints/hint-create-element-svg/
 https://stackoverflow.com/questions/41161094/dynamically-created-svg-elements-are-not-rendered-by-the-browser
+
+https://css-tricks.com/absolute-positioning-inside-relative-positioning/
+https://stackoverflow.com/questions/18932241/css-positioning-of-divs-absolute-within-relative/21740612

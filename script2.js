@@ -114,22 +114,33 @@ function processInstrumentPreset(e){
 }
 
 function drawLineBetween(htmlElement1, htmlElement2){
-	let svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-	svg.style.position = "absolute";
-	svg.style.zIndex = 0;
-	svg.style.height = "100%";
-	svg.style.width = "100%";
+	
+	// instead, we should create an individual svg per line
+	let svg = document.getElementById("svgCanvas");
+	
+	if(!svg){
+		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		svg.style.position = "absolute";
+		svg.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
+		svg.style.zIndex = 0;
+		svg.style.height = "1000px"; // calculate these after you calculate the line dimensions?
+		svg.style.width = "800px";
+		document.getElementById('nodeArea').appendChild(svg);
+	}
 	
 	let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
 	line.classList.add('line');
 	line.setAttribute('stroke', '#000');
 	line.setAttribute('stroke-width', '1px');
 	
+	//console.log(htmlElement1.getBoundingClientRect());
+	//console.log(htmlElement1.offsetWidth);
+	//console.log(window.pageXOffset);
 	
-	let element1x = htmlElement1.style.left;
-	let element1y = htmlElement1.style.top;
-	let element2x = htmlElement2.style.left;
-	let element2y = htmlElement2.style.top;
+	let element1x = htmlElement1.offsetLeft + window.pageXOffset + ((htmlElement1.offsetWidth)/2); //htmlElement1.style.left;
+	let element1y = htmlElement1.offsetTop + window.pageYOffset + ((htmlElement1.offsetHeight)/2);
+	let element2x = htmlElement2.offsetLeft + window.pageXOffset + ((htmlElement2.offsetWidth)/2);
+	let element2y = htmlElement2.offsetTop + window.pageYOffset + ((htmlElement2.offsetHeight)/2);
 	
 	line.setAttribute('x1', element1x);
 	line.setAttribute('y1', element1y);
@@ -137,7 +148,6 @@ function drawLineBetween(htmlElement1, htmlElement2){
 	line.setAttribute('y2', element2y);
 	
 	svg.appendChild(line);
-	document.getElementById('nodeArea').appendChild(svg);
 }
 
 
@@ -263,6 +273,9 @@ class NodeFactory extends AudioContext {
 				// that object will just get garbage-collected
 				// (i.e. source-to-sink. right now we just keep references to 
 				// the nodes (or sinks) a node feeds into.)
+				//console.log("svgCanvas:" + node.id + ":" + connection);
+				let svg = document.getElementById("svgCanvas:" + node.id + ":" + connection);
+				document.getElementById("nodeArea").removeChild(svg);
 			});
 		};
 		
@@ -277,8 +290,8 @@ class NodeFactory extends AudioContext {
 		// place randomly in designated area?
 		let uiElement = this._createNodeUIElement(node);
 		
-		uiElement.style.top = x || '300px';
-		uiElement.style.left = y || '300px';
+		uiElement.style.top = x || '100px';
+		uiElement.style.left = y || '100px';
 		
 		document.getElementById('nodeArea').appendChild(uiElement);
 	}
@@ -287,8 +300,6 @@ class NodeFactory extends AudioContext {
 		// add event listener to allow it to be hooked up to another node if possible
 		let customizableProperties = Object.keys(node.__proto__);
 		let uiElement = document.createElement('div');
-		//uiElement.style.width = '300px';
-		//uiElement.style.height = '210px';
 		uiElement.style.backgroundColor = "#fff";
 		uiElement.style.zIndex = 10;
 		uiElement.style.position = 'absolute';
@@ -301,12 +312,21 @@ class NodeFactory extends AudioContext {
 		
 		uiElement.addEventListener("mousedown", (evt) => {
 			//uiElement.setAttribute("mousedown", true);
-			let offsetX = evt.clientX - uiElement.getBoundingClientRect().left;
-			let offsetY = evt.clientY - uiElement.getBoundingClientRect().top;
+			let offsetX = evt.clientX - uiElement.offsetLeft;
+			let offsetY = evt.clientY - uiElement.offsetTop;
 	
 			function moveHelper(x, y){
 				uiElement.style.left = (x + 'px');
 				uiElement.style.top = (y + 'px');
+				
+				// need to check connections and redraw lines as needed!!
+				// if(connections){
+				//  for connection in connections 
+				//		let svg = document.getElementById("svgCanvas:" + node.id + ":" + connection);
+				//		document.getElementById("nodeArea").removeChild(svg);
+				//  	// redraw
+				//  	drawLineBetween(this, connection);
+				// }
 			}
 	
 			function moveNode(evt){
@@ -322,7 +342,7 @@ class NodeFactory extends AudioContext {
 		
 		// add the name of the node
 		let name = document.createElement('h4');
-		name.textContent = node.constructor.name;
+		name.textContent = node.id;
 		uiElement.appendChild(name);
 	
 		// list customizable properties of this node 
