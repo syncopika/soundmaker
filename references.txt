@@ -5,3 +5,8 @@ https://stackoverflow.com/questions/41161094/dynamically-created-svg-elements-ar
 
 https://css-tricks.com/absolute-positioning-inside-relative-positioning/
 https://stackoverflow.com/questions/18932241/css-positioning-of-divs-absolute-within-relative/21740612
+
+
+// todo:
+
+- instead of adding the oscillator reference to the nodeStore, just add a dict of props. actually, do that for all nodes.

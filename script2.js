@@ -124,7 +124,7 @@ function drawLineBetween(htmlElement1, htmlElement2){
 		svg.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
 		svg.style.zIndex = 0;
 		svg.style.height = "1000px"; // calculate these after you calculate the line dimensions?
-		svg.style.width = "800px";
+		svg.style.width = "800px";	// calculate these after you calculate the line dimensions?
 		document.getElementById('nodeArea').appendChild(svg);
 	}
 	
@@ -133,14 +133,10 @@ function drawLineBetween(htmlElement1, htmlElement2){
 	line.setAttribute('stroke', '#000');
 	line.setAttribute('stroke-width', '1px');
 	
-	//console.log(htmlElement1.getBoundingClientRect());
-	//console.log(htmlElement1.offsetWidth);
-	//console.log(window.pageXOffset);
-	
-	let element1x = htmlElement1.offsetLeft + window.pageXOffset + ((htmlElement1.offsetWidth)/2); //htmlElement1.style.left;
-	let element1y = htmlElement1.offsetTop + window.pageYOffset + ((htmlElement1.offsetHeight)/2);
-	let element2x = htmlElement2.offsetLeft + window.pageXOffset + ((htmlElement2.offsetWidth)/2);
-	let element2y = htmlElement2.offsetTop + window.pageYOffset + ((htmlElement2.offsetHeight)/2);
+	let element1x = htmlElement1.offsetLeft + document.body.scrollLeft + ((htmlElement1.offsetWidth)/2);
+	let element1y = htmlElement1.offsetTop + document.body.scrollTop + ((htmlElement1.offsetHeight)/2);
+	let element2x = htmlElement2.offsetLeft + document.body.scrollLeft + ((htmlElement2.offsetWidth)/2);
+	let element2y = htmlElement2.offsetTop + document.body.scrollTop + ((htmlElement2.offsetHeight)/2);
 	
 	line.setAttribute('x1', element1x);
 	line.setAttribute('y1', element1y);
@@ -193,7 +189,8 @@ class NodeFactory extends AudioContext {
 		// feedsInto would be an array of strings, where each string is a node's name
 		this.nodeStore[nodeName] = {
 			'node': node, 
-			'feedsInto': null
+			'feedsInto': null,
+			'feedsFrom': null
 		};
 	}
 	
@@ -267,15 +264,13 @@ class NodeFactory extends AudioContext {
 		let connections = this.nodeStore[nodeName].feedsInto;
 		if(connections){
 			connections.forEach((connection) => {
-				// just remove the UI representation of the connection
-				// as long as we don't keep references of node sources,
-				// we shouldn't have to do anything else with the feedsInto info cause
-				// that object will just get garbage-collected
-				// (i.e. source-to-sink. right now we just keep references to 
-				// the nodes (or sinks) a node feeds into.)
-				//console.log("svgCanvas:" + node.id + ":" + connection);
+				// remove the UI representation of the connection
 				let svg = document.getElementById("svgCanvas:" + node.id + ":" + connection);
 				document.getElementById("nodeArea").removeChild(svg);
+				
+				// also remove the reference of the node being deleted from this connected node's feedsFrom
+				let targetFeedsFrom = this.nodeStore[connection].feedsFrom;
+				this.nodeStore[connection].feedsFrom = targetFeedsFrom.filter(node => node !== nodeName);
 			});
 		};
 		
@@ -310,23 +305,31 @@ class NodeFactory extends AudioContext {
 		uiElement.classList.add("nodeElement");
 		uiElement.id = node.id;
 		
+		let nodeInfo = this.nodeStore[node.id];
+		
 		uiElement.addEventListener("mousedown", (evt) => {
 			//uiElement.setAttribute("mousedown", true);
-			let offsetX = evt.clientX - uiElement.offsetLeft;
-			let offsetY = evt.clientY - uiElement.offsetTop;
+			let offsetX = evt.clientX - uiElement.offsetLeft + window.pageXOffset;
+			let offsetY = evt.clientY - uiElement.offsetTop + window.pageYOffset;
 	
 			function moveHelper(x, y){
 				uiElement.style.left = (x + 'px');
 				uiElement.style.top = (y + 'px');
 				
-				// need to check connections and redraw lines as needed!!
-				// if(connections){
-				//  for connection in connections 
-				//		let svg = document.getElementById("svgCanvas:" + node.id + ":" + connection);
-				//		document.getElementById("nodeArea").removeChild(svg);
-				//  	// redraw
-				//  	drawLineBetween(this, connection);
-				// }
+				if(nodeInfo.feedsInto){
+					nodeInfo.feedsInto.forEach((connection) => {
+						let svg = document.getElementById("svgCanvas:" + uiElement.id + ":" + connection);
+						document.getElementById("nodeArea").removeChild(svg);
+						drawLineBetween(uiElement, document.getElementById(connection));
+					})
+				}else if(nodeInfo.feedsFrom){
+					nodeInfo.feedsFrom.forEach((connection) => {
+						let svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
+						document.getElementById("nodeArea").removeChild(svg);
+						drawLineBetween(document.getElementById(connection), uiElement);
+					})
+				}
+				
 			}
 	
 			function moveNode(evt){
@@ -369,11 +372,20 @@ class NodeFactory extends AudioContext {
 				
 				// update node's connections in nodeStore
 				// store the target, or the sink for this source, html id 
-				let connections = nodeStore[source.id];
-				if(connections["feedsInto"] === null){
-					connections["feedsInto"] = [target.id];
+				// make it a bidrectional graph -> the node that gets fed 
+				// should also know the nodes that feed into it.
+				let sourceConnections = nodeStore[source.id];
+				if(!sourceConnections["feedsInto"]){
+					sourceConnections["feedsInto"] = [target.id];
 				}else{
-					connections["feedsInto"].push(target.id);
+					sourceConnections["feedsInto"].push(target.id);
+				}
+				
+				let destConnections = nodeStore[target.id];
+				if(!destConnections["feedsFrom"]){
+					destConnections["feedsFrom"] = [source.id];
+				}else{
+					destConnections["feedsFrom"].push(source.id);
 				}
 				
 				// update UI to show link between nodes
