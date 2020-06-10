@@ -124,7 +124,7 @@ function drawLineBetween(htmlElement1, htmlElement2){
 		svg.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
 		svg.style.zIndex = 0;
 		svg.style.height = "1000px"; // calculate these after you calculate the line dimensions?
-		svg.style.width = "800px";	// calculate these after you calculate the line dimensions?
+		svg.style.width = "1000px";	// calculate these after you calculate the line dimensions?
 		document.getElementById('nodeArea').appendChild(svg);
 	}
 	
@@ -148,10 +148,7 @@ function drawLineBetween(htmlElement1, htmlElement2){
 
 
 class NodeFactory extends AudioContext {
-	// create your new nodes with these functions
-	// NOTE THAT OSCILLATOR NODES CAN ONLY BE STARTED/STOPPED ONCE!
-	// when a note is played multiple times, each time a new oscillator needs to 
-	// be created. but we can save the properties of the oscillator and reuse that data.
+	
 	constructor(){
 		super();
 		
@@ -197,6 +194,11 @@ class NodeFactory extends AudioContext {
 	// methods for node creation. I'm thinking of them as 'private' methods because
 	// they'll be used in other methods that are more useful and should be called on a NodeFactory instance
 	_createWaveNode(){
+		// NOTE THAT OSCILLATOR NODES CAN ONLY BE STARTED/STOPPED ONCE!
+		// when a note is played multiple times, each time a new oscillator needs to 
+		// be created. but we can save the properties of the oscillator and reuse that data.
+		// so basically we create a dummy oscillator for the purposes of storing information
+	
 		// should set it with default params, then let the user change them after clicking on the note in the UI
 		// should have another function that creates the node in the backend, and also the corresponding UI element.
 		// clicking on that element will open up a menu to allow the user to change parameters.
@@ -322,14 +324,15 @@ class NodeFactory extends AudioContext {
 						document.getElementById("nodeArea").removeChild(svg);
 						drawLineBetween(uiElement, document.getElementById(connection));
 					})
-				}else if(nodeInfo.feedsFrom){
+				}
+				
+				if(nodeInfo.feedsFrom){
 					nodeInfo.feedsFrom.forEach((connection) => {
 						let svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
 						document.getElementById("nodeArea").removeChild(svg);
 						drawLineBetween(document.getElementById(connection), uiElement);
 					})
 				}
-				
 			}
 	
 			function moveNode(evt){
@@ -472,9 +475,14 @@ class NodeFactory extends AudioContext {
 		
 		// this should be a separate function
 		if(addToInterface){
-			// add it visually to the UI 
-			// add event listeners to the UI
 			this._addNodeToInterface(newNode);
+		}
+		
+		if(nodeType === "gainNode"){
+			// gain node is special :)
+			let audioCtx = "audioCtxDest";
+			this.nodeStore[newNode.id]["feedsInto"] = [audioCtx];
+			drawLineBetween(document.getElementById(newNode.id), document.getElementById(audioCtx)); // order matters! :0
 		}
 	}
 	
