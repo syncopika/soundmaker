@@ -19,16 +19,38 @@ let currPreset = {
 
 ///////////////////////////////////  START
 
-let notes = [...document.getElementsByClassName("note")];
-notes.forEach((note) => {
-	note.addEventListener('click', (event) => {
-		audioContext.resume().then(() => {
-			//processNote(event.toElement.innerHTML, audioContext, currPreset);
+function processNote(noteFreq, nodeFactory){
+	let nodeStore = nodeFactory.nodeStore;
+	console.log(nodeStore);
+	
+	// k so this is what we need to do:
+	// look for all the oscillator nodes 
+	// create new oscillator nodes based on the props of the ones in nodeStore (those are templates)
+	// then! follow the graph -> make sure to hook up the oscillator nodes to the right feedsInto nodes 
+	// lastly, grab all the gain nodes and play!
+	
+	// stuff you probably need:
+	// oscGainNode.gain.setTargetAtTime(volume, nextTime[i], 0.0045); 
+	// osc.frequency.setValueAtTime(thisNote.freq, nextTime[i]);
+	let oscNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0);
+	console.log(oscNodes);
+	
+	oscNodes.forEach((osc) => {
+		let oscNodeTemplate = nodeStore[osc];
+		
+		// create a new osc node from the template props
+		let oscTemplateNode = oscNodeTemplate.node;
+		
+		let connections = oscNodeTemplate.feedsInto;
+		connections.forEach((conn) => {
+			// connect the new osc node to this connection 
+			let sinkNode = nodeStore[conn].node;
+			// make connection
 		});
 	});
-});
-
-function processNote(note, audioContext, currPreset){
+	
+	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0);
+	console.log(gainNodes);
 }
 
 
@@ -197,7 +219,7 @@ class NodeFactory extends AudioContext {
 		// NOTE THAT OSCILLATOR NODES CAN ONLY BE STARTED/STOPPED ONCE!
 		// when a note is played multiple times, each time a new oscillator needs to 
 		// be created. but we can save the properties of the oscillator and reuse that data.
-		// so basically we create a dummy oscillator for the purposes of storing information
+		// so basically we create a dummy oscillator for the purposes of storing information (as a template)
 	
 		// should set it with default params, then let the user change them after clicking on the note in the UI
 		// should have another function that creates the node in the backend, and also the corresponding UI element.
@@ -512,6 +534,23 @@ document.getElementById('addNoiseNode').addEventListener('click', (e) => {
 document.getElementById('addFilterNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("biquadFilterNode");
 });
+
+
+let notes = [...document.getElementsByClassName("note")];
+function setupKeyboard(keyboard, nodeFactory){
+	let audioContext = nodeFactory.audioContext;
+	notes.forEach((note) => {
+		note.addEventListener('click', (evt) => {
+			audioContext.resume().then(() => {
+				//processNote(event.toElement.innerHTML, audioContext, currPreset);
+				let noteFreq = NOTE_FREQ[note.textContent];
+				//console.log(noteFreq);
+				processNote(noteFreq, nodeFactory);
+			});
+		});
+	});
+}
+setupKeyboard(notes, soundMaker.nodeFactory);
 
 
 ///////// TESTS

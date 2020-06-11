@@ -10,9 +10,11 @@
 			font-size: 50px;
 			font-family: monospace;
 		}
+		
 		.note:hover {
 			background-color: #7FFF00;
 		}
+		
 		.preset {
 			border-left: 1px solid #000;
 			padding-left: 1%;
@@ -37,23 +39,33 @@
 			height: 100%;
 		}
 		
+		#keyboard {
+			text-align: center;
+		}
+		
+		#keys {
+			margin: 0 auto;
+		}
+		
 	</style>
 </head>
 
 <body>
 	<p> make sounds - click on a rectangle to play a note</p>
 	<p><b> to use this preset, download it and import it into my piano roll app <a href='https://syncopika.github.io/piano_roll_browser/'>here</a>!</b></p>
-	<table>
-		<tr>
-			<td class='note' id='a'>A</td>
-			<td class='note' id='b'>B</td>
-			<td class='note' id='c'>C</td>
-			<td class='note' id='d'>D</td>			
-			<td class='note' id='e'>E</td>
-			<td class='note' id='f'>F</td>			
-			<td class='note' id='g'>G</td>
-		</tr>
-	</table>
+	<div id='keyboard'>
+		<table id='keys'>
+			<tr>
+				<td class='note' id='a'>A</td>
+				<td class='note' id='b'>B</td>
+				<td class='note' id='c'>C</td>
+				<td class='note' id='d'>D</td>			
+				<td class='note' id='e'>E</td>
+				<td class='note' id='f'>F</td>			
+				<td class='note' id='g'>G</td>
+			</tr>
+		</table>
+	</div>
 	<hr />
 	
 	<div>
