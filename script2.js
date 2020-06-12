@@ -40,12 +40,27 @@ function processNote(noteFreq, nodeFactory){
 		
 		// create a new osc node from the template props
 		let oscTemplateNode = oscNodeTemplate.node;
+		let newOsc = nodeFactory.audioContext.createOscillator();
 		
+		for(let prop in Object.keys(oscNodeTemplate.__proto__)){
+			if(prop['value']){
+				newOsc[prop].value = oscNodeTemplate[prop]['value'];
+			}else{
+				newOsc[prop] = oscNodeTemplate[prop];
+			}
+		}
+		
+		//console.log(oscTemplateNode);
+		//console.log(newOsc);
+		
+		// need to go down all the way to each node and make connections (breadth-first?)
+		// gain nodes don't need to be touched as they're already attached to the context dest by default
 		let connections = oscNodeTemplate.feedsInto;
 		connections.forEach((conn) => {
 			// connect the new osc node to this connection 
 			let sinkNode = nodeStore[conn].node;
 			// make connection
+			newOsc.connect(sinkNode);
 		});
 	});
 	
@@ -178,6 +193,8 @@ class NodeFactory extends AudioContext {
 		this.audioContext.suspend();
 		
 		this.nodeStore = {};  // store refs for nodes
+		this._storeNode(this.audioContext.destination, this.audioContext.destination.constructor.name);
+		
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
 			'addNode': function(node){
@@ -203,13 +220,32 @@ class NodeFactory extends AudioContext {
 		this.nodeColors = {}; // different background color for each kind of node element
 	}
 	
+	createAudioContextDestinationUI(){
+		let audioCtxDest = document.createElement('div');
+		audioCtxDest.id = this.audioContext.destination.constructor.name;
+		audioCtxDest.style.border = "1px solid #000";
+		audioCtxDest.style.borderRadius = "20px 20px 20px 20px";
+		audioCtxDest.style.padding = "5px";
+		audioCtxDest.style.width = "200px";
+		audioCtxDest.style.height = "200px";
+		audioCtxDest.style.textAlign = "center";
+		audioCtxDest.style.position = "absolute";
+		audioCtxDest.style.top = "60%";
+		audioCtxDest.style.left = "40%";
+		audioCtxDest.style.zIndex = "10";
+		let title = document.createElement("h2");
+		title.textContent = "audio context destination";
+		audioCtxDest.appendChild(title);
+		document.getElementById("nodeArea").appendChild(audioCtxDest);
+	}
+	
 	// store a node in this.nodeStore
 	_storeNode(node, nodeName){
 		// feedsInto would be an array of strings, where each string is a node's name
 		this.nodeStore[nodeName] = {
 			'node': node, 
-			'feedsInto': null,
-			'feedsFrom': null
+			'feedsInto': [],
+			'feedsFrom': []
 		};
 	}
 	
@@ -285,18 +321,32 @@ class NodeFactory extends AudioContext {
 		this.nodeCounts.deleteNode(node);
 		
 		// unhook all connections in the UI
-		let connections = this.nodeStore[nodeName].feedsInto;
-		if(connections){
-			connections.forEach((connection) => {
+		let connectionsTo = this.nodeStore[nodeName].feedsInto;
+		if(connectionsTo){
+			connectionsTo.forEach((connection) => {
 				// remove the UI representation of the connection
-				let svg = document.getElementById("svgCanvas:" + node.id + ":" + connection);
+				let svg = document.getElementById("svgCanvas:" + nodeName + ":" + connection);
 				document.getElementById("nodeArea").removeChild(svg);
 				
 				// also remove the reference of the node being deleted from this connected node's feedsFrom
 				let targetFeedsFrom = this.nodeStore[connection].feedsFrom;
 				this.nodeStore[connection].feedsFrom = targetFeedsFrom.filter(node => node !== nodeName);
 			});
-		};
+		}
+		
+		// need to do the same for this.nodeStore[nodeName].feedsFrom !!
+		let connectionsFrom = this.nodeStore[nodeName].feedsFrom;
+		if(connectionsFrom){
+			connectionsFrom.forEach((connection) => {
+				let svg = document.getElementById("svgCanvas:" + connection + ":" + nodeName);
+				document.getElementById("nodeArea").removeChild(svg);
+				
+				// also remove the reference of the node being deleted from this connected node's feedsFrom
+				let targetFeedsInto = this.nodeStore[connection].feedsInto;
+				this.nodeStore[connection].feedsInto = targetFeedsInto.filter(node => node !== nodeName);
+			});
+		}
+
 		
 		// remove it 
 		delete this.nodeStore[nodeName];
@@ -331,8 +381,9 @@ class NodeFactory extends AudioContext {
 		
 		let nodeInfo = this.nodeStore[node.id];
 		
+		// on MOUSEDOWN
 		uiElement.addEventListener("mousedown", (evt) => {
-			//uiElement.setAttribute("mousedown", true);
+
 			let offsetX = evt.clientX - uiElement.offsetLeft + window.pageXOffset;
 			let offsetY = evt.clientY - uiElement.offsetTop + window.pageYOffset;
 	
@@ -400,18 +451,10 @@ class NodeFactory extends AudioContext {
 				// make it a bidrectional graph -> the node that gets fed 
 				// should also know the nodes that feed into it.
 				let sourceConnections = nodeStore[source.id];
-				if(!sourceConnections["feedsInto"]){
-					sourceConnections["feedsInto"] = [target.id];
-				}else{
-					sourceConnections["feedsInto"].push(target.id);
-				}
+				sourceConnections["feedsInto"].push(target.id);
 				
 				let destConnections = nodeStore[target.id];
-				if(!destConnections["feedsFrom"]){
-					destConnections["feedsFrom"] = [source.id];
-				}else{
-					destConnections["feedsFrom"].push(source.id);
-				}
+				destConnections["feedsFrom"].push(source.id);
 				
 				// update UI to show link between nodes
 				drawLineBetween(source, target);
@@ -502,8 +545,9 @@ class NodeFactory extends AudioContext {
 		
 		if(nodeType === "gainNode"){
 			// gain node is special :)
-			let audioCtx = "audioCtxDest";
+			let audioCtx = this.audioContext.destination.constructor.name;
 			this.nodeStore[newNode.id]["feedsInto"] = [audioCtx];
+			this.nodeStore[audioCtx]["feedsFrom"].push(newNode.id);
 			drawLineBetween(document.getElementById(newNode.id), document.getElementById(audioCtx)); // order matters! :0
 		}
 	}
@@ -535,6 +579,7 @@ document.getElementById('addFilterNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("biquadFilterNode");
 });
 
+soundMaker.nodeFactory.createAudioContextDestinationUI();
 
 let notes = [...document.getElementsByClassName("note")];
 function setupKeyboard(keyboard, nodeFactory){
@@ -551,7 +596,6 @@ function setupKeyboard(keyboard, nodeFactory){
 	});
 }
 setupKeyboard(notes, soundMaker.nodeFactory);
-
 
 ///////// TESTS
 function Test1(){
