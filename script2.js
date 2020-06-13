@@ -59,13 +59,25 @@ function processNote(noteFreq, nodeFactory){
 		connections.forEach((conn) => {
 			// connect the new osc node to this connection 
 			let sinkNode = nodeStore[conn].node;
+			console.log(sinkNode);
+			
 			// make connection
 			newOsc.connect(sinkNode);
+			
+			// if connection is a gain node, no need to go further
+			if(sinkNode.id.indexOf("Gain") < 0){
+				let stack = nodeStore[sinkNode.id]["feedsInto"];
+				console.log(stack);
+				
+				while(stack.length > 0){
+					let currSink = stack.pop();
+				}
+			}
+			
 		});
 	});
 	
 	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0);
-	console.log(gainNodes);
 }
 
 
