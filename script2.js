@@ -412,6 +412,7 @@ class NodeFactory extends AudioContext {
 			let offsetY = evt.clientY - uiElement.offsetTop + window.pageYOffset;
 	
 			function moveHelper(x, y){
+				
 				uiElement.style.left = (x + 'px');
 				uiElement.style.top = (y + 'px');
 				
@@ -433,6 +434,9 @@ class NodeFactory extends AudioContext {
 			}
 	
 			function moveNode(evt){
+				if(!evt.target.classList.contains("nodeElement")){
+					return;
+				}
 				moveHelper((evt.pageX - offsetX), (evt.pageY - offsetY));
 			}
 			
