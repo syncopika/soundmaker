@@ -29,37 +29,35 @@ function processNote(noteFreq, nodeFactory){
 	// then! follow the graph -> make sure to hook up the oscillator nodes to the right feedsInto nodes 
 	// lastly, grab all the gain nodes and play!
 	
-	// stuff you probably need:
-	// oscGainNode.gain.setTargetAtTime(volume, nextTime[i], 0.0045); 
-	// osc.frequency.setValueAtTime(thisNote.freq, nextTime[i]);
+	// probably should look at not just osc nodes but those with 0 input.
+	// i.e. OscillatorNodes, AudioBufferSourceNodes
 	let oscNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0);
-	console.log(oscNodes);
+	//console.log(oscNodes);
 	
+	let nodesToStart = [];
 	oscNodes.forEach((osc) => {
-		let oscNodeTemplate = nodeStore[osc];
 		
 		// create a new osc node from the template props
-		let oscTemplateNode = oscNodeTemplate.node;
-		let newOsc = nodeFactory.audioContext.createOscillator();
-		
-		for(let prop in Object.keys(oscNodeTemplate.__proto__)){
-			if(prop['value']){
-				newOsc[prop].value = oscNodeTemplate[prop]['value'];
-			}else{
-				newOsc[prop] = oscNodeTemplate[prop];
+		let oscTemplateNode = nodeStore[osc].node;
+		let templateProps = {};
+		Object.keys(oscTemplateNode.__proto__).forEach((propName) => {
+			let prop = oscTemplateNode[propName];
+			templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
+			
+			if(propName === "frequency"){
+				templateProps[propName] = noteFreq;
 			}
-		}
+		});
 		
-		//console.log(oscTemplateNode);
-		//console.log(newOsc);
+		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory.audioContext, templateProps); 
+		nodesToStart.push(newOsc);
 		
 		// need to go down all the way to each node and make connections (breadth-first?)
 		// gain nodes don't need to be touched as they're already attached to the context dest by default
-		let connections = oscNodeTemplate.feedsInto;
+		let connections = nodeStore[osc].feedsInto;
 		connections.forEach((conn) => {
 			// connect the new osc node to this connection 
 			let sinkNode = nodeStore[conn].node;
-			console.log(sinkNode);
 			
 			// make connection
 			newOsc.connect(sinkNode);
@@ -67,17 +65,32 @@ function processNote(noteFreq, nodeFactory){
 			// if connection is a gain node, no need to go further
 			if(sinkNode.id.indexOf("Gain") < 0){
 				let stack = nodeStore[sinkNode.id]["feedsInto"];
+				let newSource = sinkNode;
 				console.log(stack);
 				
 				while(stack.length > 0){
 					let currSink = stack.pop();
+					newSource.connect(currSink);
+					newSource = currSink;
+					let next = nodeStore[currSink.id]["feedsInto"].filter((name) => name.indexOf("Destination") < 0);
+					stack = stack.concat(next);
 				}
 			}
 			
 		});
 	});
 	
-	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0);
+	let time = nodeFactory.audioContext.currentTime;
+	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => nodeStore[gainId].node);
+
+	gainNodes.forEach((gain) => {
+		gain.gain.setValueAtTime(gain.gain.value, time);
+	});
+	
+	nodesToStart.forEach((osc) => {
+		osc.start(0);
+		osc.stop(nodeFactory.audioContext.currentTime + .100);
+	});
 }
 
 
@@ -358,7 +371,6 @@ class NodeFactory extends AudioContext {
 				this.nodeStore[connection].feedsInto = targetFeedsInto.filter(node => node !== nodeName);
 			});
 		}
-
 		
 		// remove it 
 		delete this.nodeStore[nodeName];
@@ -440,8 +452,27 @@ class NodeFactory extends AudioContext {
 		// and add the appropriate elements to modify those properties
 		customizableProperties.forEach((prop) => {
 			let property = document.createElement('p');
-			property.textContent = prop;
+			let text = prop;
+			let isNumValue = false;
+			if(node[prop].value !== undefined){
+				text += ".value";
+				isNumValue = true;
+			}
+			property.textContent = text;
 			uiElement.appendChild(property);
+			
+			if(isNumValue){
+				let slider = document.createElement('input');
+				slider.id = uiElement.id + "." + text;
+				slider.setAttribute('type', 'range');
+				slider.setAttribute('max', 0.5);
+				slider.setAttribute('min', 0.0);
+				slider.setAttribute('step', 0.01);
+				slider.setAttribute('value', 0.08);
+				uiElement.appendChild(slider);
+			}else{
+				// dropdown box for type
+			}
 		});
 		
 		// connect-to-other-nodes functionality 
@@ -451,11 +482,22 @@ class NodeFactory extends AudioContext {
 			
 			function selectNodeToConnectHelper(evt, source, nodeStore){
 				
-				//console.log(evt.target);
 				let target = evt.target;
 				if(!evt.target.classList.contains("nodeElement")){
 					target = evt.target.parentNode;
 				}
+				
+				// if the target is still not a node element, return
+				if(!target.classList.contains("nodeElement")){
+					return; 
+				}
+				
+				// if the target does not accept inputs (using the built-in numberOfInputs prop),
+				// also return
+				if(nodeStore[target.id].node.numberOfInputs < 1){
+					return;
+				}
+				
 				target.style.backgroundColor = "#fff";
 				
 				// update node's connections in nodeStore
@@ -500,6 +542,25 @@ class NodeFactory extends AudioContext {
 					evt.target.style.backgroundColor = "#fff";
 				}
 			}
+			
+			function cancelConnectionHelper(evt, source, nodeStore){
+				evt.preventDefault();
+				[...Object.keys(nodeStore)].forEach((node) => {
+					if(node !== source.id){
+						let otherNode = document.getElementById(node);
+						otherNode.removeEventListener("mouseover", mouseoverNode);
+						otherNode.removeEventListener("mouseleave", mouseleaveNode);
+						otherNode.removeEventListener("click", selectNodeToConnectTo);
+						otherNode.style.backgroundColor = "#fff";
+					}
+				});
+				document.body.removeEventListener("contextmenu", cancelConnection);
+			}
+			
+			function cancelConnection(evt){
+				cancelConnectionHelper(evt, uiElement, nodeStore);
+			}
+			document.body.addEventListener("contextmenu", cancelConnection);
 			
 			// TODO: set up rules to determine which kinds of nodes this one can feed into!
 			// add an event listener for all node elements that this node could connect with 
