@@ -112,9 +112,7 @@ function processInstrumentPreset(e){
 	
 	//when the image loads, put it on the canvas.
 	reader.onload = (function(theFile){
-	
 		return function(e){
-		
 			// parse JSON using JSON.parse 
 			let data = JSON.parse(e.target.result);
 			let presetName = data['presetName'];
@@ -127,7 +125,6 @@ function processInstrumentPreset(e){
 	//read the file as a URL
 	reader.readAsText(file);
 }
-
 
 
 
@@ -165,7 +162,6 @@ function processInstrumentPreset(e){
 	
 	//when the image loads, put it on the canvas.
 	reader.onload = (function(theFile){
-	
 		return function(e){
 			let importedPreset = JSON.parse(e.target.result);
 		}
@@ -243,6 +239,14 @@ class NodeFactory extends AudioContext {
 		}; // keep track of count of each unique node for id creation
 		
 		this.nodeColors = {}; // different background color for each kind of node element
+		
+		
+		// for deciding the ranges for certain parameter values
+		this.valueRanges = {
+			"frequency": [300, 1000],
+			"detune": [-100, 100],
+		}
+
 	}
 	
 	createAudioContextDestinationUI(){
@@ -464,16 +468,31 @@ class NodeFactory extends AudioContext {
 			}
 			property.textContent = text;
 			uiElement.appendChild(property);
-			
+
 			if(isNumValue){
 				let slider = document.createElement('input');
 				slider.id = uiElement.id + "." + text;
 				slider.setAttribute('type', 'range');
-				slider.setAttribute('max', 0.5);
-				slider.setAttribute('min', 0.0);
+				slider.setAttribute('max', this.valueRanges[prop] ? this.valueRanges[prop][1] : 0.5);
+				slider.setAttribute('min', this.valueRanges[prop] ? this.valueRanges[prop][0] : 0.0);
 				slider.setAttribute('step', 0.01);
-				slider.setAttribute('value', 0.08);
+				slider.setAttribute('value', this.valueRanges[prop] ? this.valueRanges[prop][0] : 0.08);
+				
+				let label = document.createElement('span');
+				label.id = uiElement.id + "-value";
+				label.textContent = slider.getAttribute('value');
+				
+				slider.addEventListener('change', function(evt){
+					let newVal = parseFloat(evt.target.value);
+					label.textContent = newVal;
+					
+					// update node
+					let field = this.id.split(".")[1];
+					nodeInfo.node[field].value = newVal;
+				});
+				
 				uiElement.appendChild(slider);
+				uiElement.appendChild(label);
 			}else{
 				// dropdown box for type
 			}
