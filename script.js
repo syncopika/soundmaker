@@ -1,11 +1,11 @@
 const NOTE_FREQ = {
+	"G": 783.99,
+	"F": 698.46,
+	"E": 659.25,
+	"D": 587.33,
+	"C": 523.25,
 	"B": 493.88,
 	"A": 440.00,
-	"G": 392.00,
-	"F": 349.23,
-	"E": 329.63,
-	"D": 293.66,
-	"C": 261.63,
 };
 
 let currPreset = {
@@ -31,7 +31,7 @@ function processNote(noteFreq, nodeFactory){
 	
 	// probably should look at not just osc nodes but those with 0 input.
 	// i.e. OscillatorNodes, AudioBufferSourceNodes
-	let oscNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0);
+	let oscNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
 	//console.log(oscNodes);
 	
 	let nodesToStart = [];
@@ -49,7 +49,7 @@ function processNote(noteFreq, nodeFactory){
 			}
 		});
 		
-		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory.audioContext, templateProps); 
+		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory.audioContext, templateProps);
 		nodesToStart.push(newOsc);
 		
 		// need to go down all the way to each node and make connections (breadth-first?)
@@ -62,21 +62,22 @@ function processNote(noteFreq, nodeFactory){
 			// make connection
 			newOsc.connect(sinkNode);
 			
-			// if connection is a gain node, no need to go further
+			// if source is a gain node, no need to go further
 			if(sinkNode.id.indexOf("Gain") < 0){
 				let stack = nodeStore[sinkNode.id]["feedsInto"];
 				let newSource = sinkNode;
-				console.log(stack);
 				
 				while(stack.length > 0){
-					let currSink = stack.pop();
+					let next = stack.pop();
+					let currSink = nodeStore[next].node;
+					console.log("connecting: " + newSource.constructor.name + " to: " + currSink.constructor.name);
+					
 					newSource.connect(currSink);
 					newSource = currSink;
-					let next = nodeStore[currSink.id]["feedsInto"].filter((name) => name.indexOf("Destination") < 0);
-					stack = stack.concat(next);
+					nextConnections = nodeStore[next]["feedsInto"].filter((name) => name.indexOf("Destination") < 0);
+					stack = stack.concat(nextConnections);
 				}
 			}
-			
 		});
 	});
 	
@@ -201,6 +202,11 @@ function drawLineBetween(htmlElement1, htmlElement2){
 	line.setAttribute('x2', element2x);
 	line.setAttribute('y2', element2y);
 	
+	let maxWidth = Math.max(element1x, element2x) + 200;
+	let maxHeight = Math.max(element1y, element2y) + 200;
+	svg.style.height = parseInt(svg.style.height) < maxHeight ? (maxHeight + "px") : svg.style.height;
+	svg.style.width = parseInt(svg.style.width) < maxWidth ? (maxWidth + "px") : svg.style.width;
+	
 	svg.appendChild(line);
 }
 
@@ -241,25 +247,63 @@ class NodeFactory extends AudioContext {
 		this.nodeColors = {}; // different background color for each kind of node element
 		
 		
-		// for deciding the ranges for certain parameter values
+		// for deciding the ranges and stuff for certain parameter values
 		this.valueRanges = {
-			"frequency": {
-				"min": 300,
-				"default": 440, 
-				"max": 1000, 
-				"step": 1
-			}, // min, default, max, step
-			"detune": {
-				"min": -1200, 
-				"default": 0,
-				"max": 1200,
-				"step": 1
+			"OscillatorNode": {
+				"detune": {
+					"min": -1200, 
+					"default": 0,
+					"max": 1200,
+					"step": 1
+				},
+				"frequency": {
+					"min": 300,
+					"default": 440, 
+					"max": 1000, 
+					"step": 1
+				}
 			},
-			"gain": {
-				"min": 0, 
-				"default": 0.3,
-				"max": 2,
-				"step": 0.05
+			"GainNode": {
+				"gain": {
+					"min": 0, 
+					"default": 0.3,
+					"max": 2,
+					"step": 0.05
+				}
+			},
+			"AudioBufferSourceNode": {
+				"detune": {
+					"min": -1200, 
+					"default": 0,
+					"max": 1200,
+					"step": 1
+				}
+			},
+			"BiquadFilterNode": {
+				"gain": {
+					"max": 40,
+					"min": -40,
+					"default": 0,
+					"step": 1
+				},
+				"Q": {
+					"max": 1000,
+					"min": 0.0001,
+					"default": 1,
+					"step": .05
+				},
+				"detune": {
+					"min": -1200, 
+					"default": 0,
+					"max": 1200,
+					"step": 1
+				},
+				"frequency": {
+					"min": 300,
+					"default": 440, 
+					"max": 1000, 
+					"step": 1
+				}
 			},
 			"waveType": [
 				"sine",
@@ -290,7 +334,7 @@ class NodeFactory extends AudioContext {
 		audioCtxDest.style.height = "200px";
 		audioCtxDest.style.textAlign = "center";
 		audioCtxDest.style.position = "absolute";
-		audioCtxDest.style.top = "60%";
+		audioCtxDest.style.top = "30%";
 		audioCtxDest.style.left = "40%";
 		audioCtxDest.style.zIndex = "10";
 		let title = document.createElement("h2");
@@ -316,10 +360,6 @@ class NodeFactory extends AudioContext {
 		// when a note is played multiple times, each time a new oscillator needs to 
 		// be created. but we can save the properties of the oscillator and reuse that data.
 		// so basically we create a dummy oscillator for the purposes of storing information (as a template)
-	
-		// should set it with default params, then let the user change them after clicking on the note in the UI
-		// should have another function that creates the node in the backend, and also the corresponding UI element.
-		// clicking on that element will open up a menu to allow the user to change parameters.
 		let osc = this.audioContext.createOscillator();
 		// default params 
 		osc.frequency.value = 440; // A @ 440 Hz
@@ -469,6 +509,8 @@ class NodeFactory extends AudioContext {
 			}
 	
 			function moveNode(evt){
+				//evt.stopPropagation();
+				//evt.preventDefault();
 				if(!evt.target.classList.contains("nodeElement")){
 					return;
 				}
@@ -502,20 +544,22 @@ class NodeFactory extends AudioContext {
 
 			if(isNumValue){
 				// what kind of param is it 
-				//console.log(prop);			
+				//console.log(prop);
+				let props = this.valueRanges[node.constructor.name][prop];
+				
 				let slider = document.createElement('input');
 				slider.id = uiElement.id + "." + text;
 				slider.setAttribute('type', 'range');
-				slider.setAttribute('max', this.valueRanges[prop] ? this.valueRanges[prop]['max'] : 0.5);
-				slider.setAttribute('min', this.valueRanges[prop] ? this.valueRanges[prop]['min'] : 0.0);
-				slider.setAttribute('step', this.valueRanges[prop] ? this.valueRanges[prop]['step'] : 0.01);
-				slider.setAttribute('value', this.valueRanges[prop] ? this.valueRanges[prop]['default'] : 0.08);
+				slider.setAttribute('max', props ? props['max'] : 0.5);
+				slider.setAttribute('min', props ? props['min'] : 0.0);
+				slider.setAttribute('step', props ? props['step'] : 0.01);
+				slider.setAttribute('value', props ? props['default'] : 0.08);
 				
 				let label = document.createElement('span');
 				label.id = uiElement.id + "-value";
 				label.textContent = slider.getAttribute('value');
 				
-				slider.addEventListener('change', function(evt){
+				slider.addEventListener('input', function(evt){
 					let newVal = parseFloat(evt.target.value);
 					label.textContent = newVal;
 					
@@ -525,6 +569,7 @@ class NodeFactory extends AudioContext {
 				});
 				
 				uiElement.appendChild(slider);
+				uiElement.appendChild(document.createElement('br'));
 				uiElement.appendChild(label);
 				uiElement.appendChild(document.createElement('br'));
 			}else{
@@ -534,7 +579,6 @@ class NodeFactory extends AudioContext {
 					dropdown.id = uiElement.id + "." + text;
 					let options = [];
 					if(node.constructor.name.indexOf("Oscillator") >= 0){
-						// only oscillators should have wave types?
 						// use waveType
 						options = this.valueRanges["waveType"];
 					}else{
@@ -653,8 +697,6 @@ class NodeFactory extends AudioContext {
 					otherNode.addEventListener("click", selectNodeToConnectTo);
 				}
 			})
-			
-			
 		});
 		uiElement.appendChild(connectButton);
 		
@@ -750,6 +792,12 @@ function setupKeyboard(keyboard, nodeFactory){
 	});
 }
 setupKeyboard(notes, soundMaker.nodeFactory);
+
+
+
+
+
+
 
 ///////// TESTS
 function Test1(){
