@@ -210,6 +210,90 @@ function drawLineBetween(htmlElement1, htmlElement2){
 	svg.appendChild(line);
 }
 
+function showParameterEditWindow(nodeInfo, valueRanges){
+	let editWindow = document.getElementById("editNode");
+	while(editWindow.firstChild){
+		editWindow.removeChild(editWindow.firstChild);
+	}
+	let title = document.createElement("h3");
+	title.textContent = nodeInfo.node.id;
+	editWindow.appendChild(title);
+	//console.log(nodeInfo);
+	
+	let node = nodeInfo.node;
+	let customizableProperties = Object.keys(nodeInfo.node.__proto__);
+	customizableProperties.forEach((prop) => {
+		let property = document.createElement('p');
+		let text = prop;
+		let isNumValue = false;
+		if(node[prop].value !== undefined){
+			text += ".value";
+			isNumValue = true;
+		}
+		property.textContent = text;
+		editWindow.appendChild(property);
+
+		if(isNumValue){
+			// what kind of param is it 
+			//console.log(prop);
+			
+			let props = valueRanges[node.constructor.name][prop];
+			
+			let slider = document.createElement('input');
+			slider.id = text;
+			slider.setAttribute('type', 'range');
+			slider.setAttribute('max', props ? props['max'] : 0.5);
+			slider.setAttribute('min', props ? props['min'] : 0.0);
+			slider.setAttribute('step', props ? props['step'] : 0.01);
+			slider.setAttribute('value', props ? props['default'] : node[prop].value);
+			
+			let label = document.createElement('span');
+			label.id = text;
+			label.textContent = slider.getAttribute('value');
+			
+			slider.addEventListener('input', function(evt){
+				let newVal = parseFloat(evt.target.value);
+				label.textContent = newVal;
+				
+				// update node
+				node[prop].value = newVal;
+			});
+			
+			editWindow.appendChild(slider);
+			editWindow.appendChild(document.createElement('br'));
+			editWindow.appendChild(label);
+			editWindow.appendChild(document.createElement('br'));
+		}else{
+			if(prop === "type"){
+				// dropdown box for type
+				let dropdown = document.createElement('select');
+				dropdown.id = text + "Type";
+				let options = [];
+				if(node.constructor.name.indexOf("Oscillator") >= 0){
+					// use waveType
+					options = valueRanges["waveType"];
+				}else{
+					// use filterType
+					options = valueRanges["filterType"];
+				}
+				options.forEach((opt) => {
+					let option = document.createElement('option');
+					option.textContent = opt;
+					dropdown.appendChild(option);
+				});
+				dropdown.addEventListener('change', (evt) => {
+					let val = dropdown.options[dropdown.selectedIndex].value;
+					nodeInfo.node[prop] = val;
+				});
+				dropdown.value = node[prop];
+				editWindow.appendChild(dropdown);
+			}
+		}
+	});
+	
+	
+}
+
 
 class NodeFactory extends AudioContext {
 	
@@ -411,6 +495,7 @@ class NodeFactory extends AudioContext {
 	
 	// attack, decay, sustain, release envelope node
 	_createADSREnvelopeNode(){
+		
 	}
 	
 	_deleteNode(node){
@@ -466,7 +551,7 @@ class NodeFactory extends AudioContext {
 	
 	_createNodeUIElement(node){
 		// add event listener to allow it to be hooked up to another node if possible
-		let customizableProperties = Object.keys(node.__proto__);
+		//let customizableProperties = Object.keys(node.__proto__);
 		let uiElement = document.createElement('div');
 		uiElement.style.backgroundColor = "#fff";
 		uiElement.style.zIndex = 10;
@@ -524,6 +609,11 @@ class NodeFactory extends AudioContext {
 			});
 		});
 		
+		uiElement.addEventListener('dblclick', (evt) => {
+			// display menu for this node to edit params 
+			showParameterEditWindow(nodeInfo, this.valueRanges);
+		});
+		
 		// add the name of the node
 		let name = document.createElement('h4');
 		name.textContent = node.id;
@@ -531,6 +621,7 @@ class NodeFactory extends AudioContext {
 	
 		// list customizable properties of this node 
 		// and add the appropriate elements to modify those properties
+		/*
 		customizableProperties.forEach((prop) => {
 			let property = document.createElement('p');
 			let text = prop;
@@ -545,6 +636,7 @@ class NodeFactory extends AudioContext {
 			if(isNumValue){
 				// what kind of param is it 
 				//console.log(prop);
+				
 				let props = this.valueRanges[node.constructor.name][prop];
 				
 				let slider = document.createElement('input');
@@ -599,6 +691,7 @@ class NodeFactory extends AudioContext {
 				}
 			}
 		});
+		*/
 		
 		// connect-to-other-nodes functionality 
 		let connectButton = document.createElement('button');
@@ -699,6 +792,7 @@ class NodeFactory extends AudioContext {
 			})
 		});
 		uiElement.appendChild(connectButton);
+		uiElement.appendChild(document.createElement('br'));
 		
 		// delete node functionality
 		let deleteButton = document.createElement('button');

@@ -35,6 +35,13 @@
 			margin: 0 auto;
 		}
 		
+		#editNode {
+			width: 15%;
+			height: 100%;
+			border: 1px solid #000;
+			text-align: center;
+		}
+		
 		
 	</style>
 </head>
@@ -42,6 +49,7 @@
 <body>
 	<p> make sounds - click on a rectangle to play a note</p>
 	<p> when connecting nodes, if you want to cancel/abort creating a connection, just right-click on any node. </p>
+	<p> double-click a node to edit its parameters. </p>
 	<p><b> to use this preset, download it and import it into my piano roll app <a href='https://syncopika.github.io/piano_roll_browser/'>here</a>!</b></p>
 	<div id='keyboard'>
 		<table id='keys'>
@@ -75,9 +83,17 @@
 			Add a new filter node
 		</button>
 		
+		<button id='addADSRNode'>
+			Add a new ADSR node
+		</button>
+		
 	</div>
 	
 	<hr />
+	
+	<div id='editNode'>
+		<p> edit node </p>
+	</div>
 	
 	<div id='nodeArea'>
 	</div>
