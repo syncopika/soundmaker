@@ -21,7 +21,7 @@ let currPreset = {
 
 function processNote(noteFreq, nodeFactory){
 	let nodeStore = nodeFactory.nodeStore;
-	console.log(nodeStore);
+	//console.log(nodeStore);
 	
 	// k so this is what we need to do:
 	// look for all the oscillator nodes 
@@ -88,10 +88,7 @@ function processNote(noteFreq, nodeFactory){
 		gain.gain.setValueAtTime(gain.gain.value, time);
 	});
 	
-	nodesToStart.forEach((osc) => {
-		osc.start(0);
-		osc.stop(nodeFactory.audioContext.currentTime + .100);
-	});
+	return nodesToStart;
 }
 
 
@@ -389,6 +386,8 @@ class NodeFactory extends AudioContext {
 					"step": 1
 				}
 			},
+			"ADSREnvelope": {
+			},
 			"waveType": [
 				"sine",
 				"square",
@@ -494,8 +493,13 @@ class NodeFactory extends AudioContext {
 	}
 	
 	// attack, decay, sustain, release envelope node
+	// this will target the params of another node like Oscillator or BiquadFilter or Gain 
+	// for now we should keep this very simple! :)
 	_createADSREnvelopeNode(){
-		
+		// attack
+		// sustain 
+		// decay 
+		// release
 	}
 	
 	_deleteNode(node){
@@ -872,15 +876,26 @@ document.getElementById('addFilterNode').addEventListener('click', (e) => {
 soundMaker.nodeFactory.createAudioContextDestinationUI();
 
 let notes = [...document.getElementsByClassName("note")];
+let currPlayingNodes = [];
+
 function setupKeyboard(keyboard, nodeFactory){
 	let audioContext = nodeFactory.audioContext;
 	notes.forEach((note) => {
-		note.addEventListener('click', (evt) => {
+		note.addEventListener('mouseup', (evt) => {
+			currPlayingNodes.forEach((osc) => {
+				osc.stop(audioContext.currentTime);
+			});
+		});
+		
+		note.addEventListener('mousedown', (evt) => {
 			audioContext.resume().then(() => {
 				//processNote(event.toElement.innerHTML, audioContext, currPreset);
 				let noteFreq = NOTE_FREQ[note.textContent];
 				//console.log(noteFreq);
-				processNote(noteFreq, nodeFactory);
+				currPlayingNodes = processNote(noteFreq, nodeFactory);
+				currPlayingNodes.forEach((osc) => {
+					osc.start(0);
+				});
 			});
 		});
 	});

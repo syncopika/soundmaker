@@ -8,5 +8,10 @@ https://stackoverflow.com/questions/18932241/css-positioning-of-divs-absolute-wi
 
 https://stackoverflow.com/questions/20387534/prevent-mousedown-event-on-input-range-html-element-and-still-let-user-drag-slid/52007221
 
+
+https://blog.chrislowis.co.uk/2013/06/17/synthesis-web-audio-api-envelopes.html
+https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
+https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
+
 // todo:
 - instead of adding the oscillator reference to the nodeStore, just add a dict of props. actually, do that for all nodes.
