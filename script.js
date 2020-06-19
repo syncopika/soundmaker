@@ -305,8 +305,9 @@ class NodeFactory extends AudioContext {
 		
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
-			'addNode': function(node){
-				let nodeType = node.constructor.name;
+			// use nodeName if supplied
+			'addNode': function(node, nodeName=null){
+				let nodeType = nodeName || node.constructor.name;
 				
 				// just keeping count here
 				if(this[nodeType]){
@@ -318,8 +319,8 @@ class NodeFactory extends AudioContext {
 				return this[nodeType];
 			},
 			
-			'deleteNode': function(node){
-				let nodeType = node.constructor.name;
+			'deleteNode': function(node, nodeName=null){
+				let nodeType = nodeName || node.constructor.name;
 				this[nodeType]--;
 				return this[nodeType];
 			}
@@ -496,18 +497,28 @@ class NodeFactory extends AudioContext {
 	// this will target the params of another node like Oscillator or BiquadFilter or Gain 
 	// for now we should keep this very simple! :)
 	_createADSREnvelopeNode(){
-		// attack
-		// sustain 
-		// decay 
-		// release
+		let envelope = {
+			"attack": 0,
+			"sustain": 0,
+			"decay": 0,
+			"release": 0
+		}
+		
+		let id = "ADSREnvelope" + this.nodeCounts.addNode(envelope, "ADSREnvelope");
+		envelope.id = id;
+		return envelope;
 	}
 	
-	_deleteNode(node){
+	_deleteNode(node, name=null){
 		let nodeName = node.id;
 		let nodeToDelete = this.nodeStore[nodeName].node;
 		
 		// decrement count 
-		this.nodeCounts.deleteNode(node);
+		if(name){
+			this.nodeCounts.deleteNode(node, name);
+		}else{
+			this.nodeCounts.deleteNode(node);
+		}
 		
 		// unhook all connections in the UI
 		let connectionsTo = this.nodeStore[nodeName].feedsInto;
@@ -622,80 +633,6 @@ class NodeFactory extends AudioContext {
 		let name = document.createElement('h4');
 		name.textContent = node.id;
 		uiElement.appendChild(name);
-	
-		// list customizable properties of this node 
-		// and add the appropriate elements to modify those properties
-		/*
-		customizableProperties.forEach((prop) => {
-			let property = document.createElement('p');
-			let text = prop;
-			let isNumValue = false;
-			if(node[prop].value !== undefined){
-				text += ".value";
-				isNumValue = true;
-			}
-			property.textContent = text;
-			uiElement.appendChild(property);
-
-			if(isNumValue){
-				// what kind of param is it 
-				//console.log(prop);
-				
-				let props = this.valueRanges[node.constructor.name][prop];
-				
-				let slider = document.createElement('input');
-				slider.id = uiElement.id + "." + text;
-				slider.setAttribute('type', 'range');
-				slider.setAttribute('max', props ? props['max'] : 0.5);
-				slider.setAttribute('min', props ? props['min'] : 0.0);
-				slider.setAttribute('step', props ? props['step'] : 0.01);
-				slider.setAttribute('value', props ? props['default'] : 0.08);
-				
-				let label = document.createElement('span');
-				label.id = uiElement.id + "-value";
-				label.textContent = slider.getAttribute('value');
-				
-				slider.addEventListener('input', function(evt){
-					let newVal = parseFloat(evt.target.value);
-					label.textContent = newVal;
-					
-					// update node
-					let field = this.id.split(".")[1];
-					nodeInfo.node[field].value = newVal;
-				});
-				
-				uiElement.appendChild(slider);
-				uiElement.appendChild(document.createElement('br'));
-				uiElement.appendChild(label);
-				uiElement.appendChild(document.createElement('br'));
-			}else{
-				if(prop === "type"){
-					// dropdown box for type
-					let dropdown = document.createElement('select');
-					dropdown.id = uiElement.id + "." + text;
-					let options = [];
-					if(node.constructor.name.indexOf("Oscillator") >= 0){
-						// use waveType
-						options = this.valueRanges["waveType"];
-					}else{
-						// use filterType
-						options = this.valueRanges["filterType"];
-					}
-					options.forEach((opt) => {
-						let option = document.createElement('option');
-						option.textContent = opt;
-						dropdown.appendChild(option);
-					});
-					dropdown.addEventListener('change', (evt) => {
-						let val = dropdown.options[dropdown.selectedIndex].value;
-						let field = evt.target.id.split(".")[1];
-						nodeInfo.node[field] = val;
-					});
-					uiElement.appendChild(dropdown);
-				}
-			}
-		});
-		*/
 		
 		// connect-to-other-nodes functionality 
 		let connectButton = document.createElement('button');
@@ -802,7 +739,11 @@ class NodeFactory extends AudioContext {
 		let deleteButton = document.createElement('button');
 		deleteButton.textContent = "delete";
 		deleteButton.addEventListener('click', (evt) => {
-			this._deleteNode(node);
+			if(uiElement.id.indexOf("ADSR") >= 0){
+				this._deleteNode(node, "ADSREnvelope");
+			}else{
+				this._deleteNode(node);
+			}
 		});
 		
 		uiElement.appendChild(deleteButton);
@@ -824,6 +765,8 @@ class NodeFactory extends AudioContext {
 			newNode = this._createNoiseNode();
 		}else if(nodeType === "gainNode"){
 			newNode = this._createGainNode();
+		}else if(nodeType === "ADSREnvelope"){
+			newNode = this._createADSREnvelopeNode();
 		}else{
 			console.log("unknown node type!");
 			return;
@@ -871,6 +814,10 @@ document.getElementById('addNoiseNode').addEventListener('click', (e) => {
 
 document.getElementById('addFilterNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("biquadFilterNode");
+});
+
+document.getElementById('addADSRNode').addEventListener('click', (e) => {
+	soundMaker.nodeFactory.addNewNode("ADSREnvelope");
 });
 
 soundMaker.nodeFactory.createAudioContextDestinationUI();
