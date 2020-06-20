@@ -47,9 +47,11 @@
 </head>
 
 <body>
-	<p> make sounds - click on a rectangle to play a note</p>
+	<h3><b> disclaimer: still in a highly experimental/prototype phase. thanks! </b></h3>
+	<p> make sounds - click on a rectangle to play a note after hooking up an oscillator to a gain node.</p>
 	<p> when connecting nodes, if you want to cancel/abort creating a connection, just right-click on any node. </p>
 	<p> double-click a node to edit its parameters. </p>
+	<p> currently the ADSR envelope can only be used for gain nodes. </p>
 	<p><b> to use this preset, download it and import it into my piano roll app <a href='https://syncopika.github.io/piano_roll_browser/'>here</a>!</b></p>
 	<div id='keyboard'>
 		<table id='keys'>
@@ -85,6 +87,10 @@
 		
 		<button id='addADSRNode'>
 			Add a new ADSR envelope
+		</button>
+		
+		<button id='download'>
+			download preset
 		</button>
 		
 	</div>

@@ -88,21 +88,32 @@ function processNote(noteFreq, nodeFactory){
 		// we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
 		// maybe use dotted lines?
 		let gainNode = gain.node;
-		if(gain.feedsFrom.contains("")){
+		let adsr = getADSRFeed(gain);
+		if(adsr){
 			// if an adsr envelope feeds into this gain node, run the adsr function on the gain
+			let envelope = nodeStore[adsr].node;
+			//console.log(envelope);
+			envelope.applyADSR(gainNode.gain, time);
 		}else{
-			gain.gain.setValueAtTime(gain.gain.value, time);
+			gainNode.gain.setValueAtTime(gainNode.gain.value, time);
 		}
 	});
 	
 	return nodesToStart;
 }
 
-
-/////////////////////////////////////////
-function getAlphaString(str){
-	return str.match(/[a-zA-Z]+/g)[0];
+function getADSRFeed(sinkNode){
+	// check if sinkNode has an ADSR envelope
+	let feedsFrom = sinkNode.feedsFrom;
+	for(let i = 0; i < feedsFrom.length; i++){
+		let source = feedsFrom[i];
+		if(source.indexOf("ADSR") >= 0){
+			return source; // return name of ADSR envelope
+		}
+	};
+	return null;
 }
+
 
 // import preset 
 function importInstrumentPreset(){
@@ -121,9 +132,8 @@ function processInstrumentPreset(e){
 			// parse JSON using JSON.parse 
 			let data = JSON.parse(e.target.result);
 			let presetName = data['presetName'];
-
-			// store the preset in the PianoRoll obj 
-			pianoRoll.instrumentPresets[presetName] = data;
+			
+			// TODO: finish
 		}
 	})(file);
 
@@ -133,16 +143,47 @@ function processInstrumentPreset(e){
 
 
 
-function downloadPreset(){
+function exportPreset(nodeFactory){
 	let fileName = prompt("enter filename");
 	if(fileName === null || fileName === ""){
 		return;
 	}
 	
-	currPreset["presetName"] = fileName;
-	currPreset["notes"] = document.getElementById('notes').value;
+	let objToExport = {};
+	let currNodeStore = nodeFactory.nodeStore;
+	let currNodeStoreKeys = Object.keys(currNodeStore);
+	currNodeStoreKeys.forEach((node) => {
+		let currNode = currNodeStore[node];
+		
+		let nodeProps = {};
+		nodeProps.id = currNode.node.id;
+		nodeProps.feedsFrom = currNode.feedsFrom;
+		nodeProps.feedsInto = currNode.feedsInto;
+		
+		let params = Object.keys(currNode.node.__proto__);
+		if(params.length === 0){
+			// i.e. for ADSREnvelope 
+			params = Object.keys(currNode.node);
+		}
+		
+		let nodeParams = {};
+		params.forEach((param) => {
+			if(currNode.node[param].value){
+				// should just test value type instead? i.e. number vs string? if num, use value property?
+				nodeParams[param] = currNode.node[param].value;
+			}else{
+				nodeParams[param] = currNode.node[param];
+			}
+		});
+		nodeProps.node = nodeParams;
+		
+		objToExport[node] = nodeProps;
+	});
 	
-	let blob = new Blob([JSON.stringify(currPreset, null, 2)], {type: "application/json"});
+	//console.log(objToExport);
+	
+	
+	let blob = new Blob([JSON.stringify(objToExport, null, 2)], {type: "application/json"});
 	//make a url for that blob
 	let url = URL.createObjectURL(blob);
 	
@@ -153,6 +194,8 @@ function downloadPreset(){
 	//then simulate a click to the blob url to initiate download
 	link.click();
 }
+
+
 
 
 function importInstrumentPreset(){
@@ -231,7 +274,6 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 		// i.e. for adsr envelope 
 		customizableProperties = Object.keys(nodeInfo.node).filter((prop) => typeof(nodeInfo.node[prop]) === "number");
 	}
-	//console.log(customizableProperties);
 	
 	customizableProperties.forEach((prop) => {
 		let property = document.createElement('p');
@@ -243,10 +285,11 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 		}else if(typeof(node[prop]) === "number"){
 			isNumValue = true;
 		}
+		
 		property.textContent = text;
-		editWindow.appendChild(property);
 
 		if(isNumValue){
+			editWindow.appendChild(property);
 			// what kind of param is it 
 			// probably should refactor this. instead, make sure each NODE INSTANCE has some new field called 'nodeType' that we can use?
 			let props = valueRanges[node.constructor.name] || valueRanges[node.type];
@@ -258,7 +301,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			slider.setAttribute('max', props ? props['max'] : 0.5);
 			slider.setAttribute('min', props ? props['min'] : 0.0);
 			slider.setAttribute('step', props ? props['step'] : 0.01);
-			slider.setAttribute('value', props ? props['default'] : node[prop].value);
+			slider.setAttribute('value', props ? props['default'] : 0.0);
 			
 			let label = document.createElement('span');
 			label.id = text;
@@ -269,7 +312,12 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 				label.textContent = newVal;
 				
 				// update node
-				node[prop].value = newVal;
+				// probably should refactor (shouldn't have to check value prop?)
+				if(node[prop].value){
+					node[prop].value = newVal;
+				}else{
+					node[prop] = newVal;
+				}
 			});
 			
 			editWindow.appendChild(slider);
@@ -278,6 +326,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			editWindow.appendChild(document.createElement('br'));
 		}else{
 			if(prop === "type"){
+				editWindow.appendChild(property);
 				// dropdown box for type
 				let dropdown = document.createElement('select');
 				dropdown.id = text + "Type";
@@ -303,15 +352,42 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			}
 		}
 	});
-	
-	
+		
 }
 
+
+class ADSREnvelope {
+	constructor(){
+		this.attack = 0;
+		this.sustain = 0;
+		this.decay = 0;
+		this.release = 0;
+		this.sustainLevel = 0;
+	}
+	
+	applyADSR(targetNodeParam, time){
+		// targetNodeParam might be the gain property of a gain node, or a filter node for example
+		// the targetNode just needs to have fields that make sense to be manipulated with ADSR
+		// i.e. pass in gain.gain as targetNodeParam
+		// https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
+		//let targetNodeParam = targetNode[param];
+		let baseParamVal = targetNodeParam.value; // i.e. gain.gain.value
+		
+		targetNodeParam.linearRampToValueAtTime(0.0, time);
+		targetNodeParam.linearRampToValueAtTime(baseParamVal, time + this.attack);
+		targetNodeParam.linearRampToValueAtTime(baseParamVal * this.sustainLevel, this.attack + this.decay);
+		targetNodeParam.linearRampToValueAtTime(baseParamVal * this.sustainLevel, this.attack + this.decay + this.sustain);
+		targetNodeParam.linearRampToValueAtTime(0.0, this.attack + this.decay + this.sustain + this.release);
+		return targetNodeParam;
+	}
+}
 
 class NodeFactory extends AudioContext {
 	
 	constructor(){
 		super();
+		
+		this.nodeColors = {}; // different background color for each kind of node element?
 		
 		this.audioContext = new AudioContext();
 		this.audioContext.suspend();
@@ -322,8 +398,8 @@ class NodeFactory extends AudioContext {
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
 			// use nodeName if supplied
-			'addNode': function(node, nodeName=null){
-				let nodeType = nodeName || node.constructor.name;
+			'addNode': function(node){
+				let nodeType = node.constructor.name;
 				
 				// just keeping count here
 				if(this[nodeType]){
@@ -335,14 +411,11 @@ class NodeFactory extends AudioContext {
 				return this[nodeType];
 			},
 			'deleteNode': function(node, nodeName=null){
-				let nodeType = nodeName || node.constructor.name;
+				let nodeType = node.constructor.name;
 				this[nodeType]--;
 				return this[nodeType];
 			}
 		}; // keep track of count of each unique node for id creation
-		
-		this.nodeColors = {}; // different background color for each kind of node element
-		
 		
 		// for deciding the ranges and stuff for certain parameter values
 		this.valueRanges = {
@@ -520,6 +593,7 @@ class NodeFactory extends AudioContext {
 		let gainNode = this.audioContext.createGain();
 		// gain will alwaays need to attach to context destination
 		gainNode.connect(this.audioContext.destination);
+		gainNode.gain.value = this.valueRanges.GainNode.gain.default;
 		gainNode.id = (gainNode.constructor.name + this.nodeCounts.addNode(gainNode));
 		return gainNode;
 	}
@@ -542,42 +616,17 @@ class NodeFactory extends AudioContext {
 	// this will target the params of another node like Oscillator or BiquadFilter or Gain 
 	// for now we should keep this very simple! :)
 	_createADSREnvelopeNode(){
-		let envelope = {
-			"attack": 0,
-			"sustain": 0,
-			"decay": 0,
-			"release": 0,
-			"sustainLevel": 0,
-			"applyADSR": function(targetNodeParam, time){
-				// targetNodeParam might be the gain property of a gain node, or a filter node for example
-				// the targetNode just needs to have fields that make sense to be manipulated with ADSR
-				// i.e. pass in gain.gain as targetNodeParam
-				// https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
-				targetNodeParam.linearRampToValueAtTime(0.0, time);
-				targetNodeParam.linearRampToValueAtTime(1.0, time + this.attack);
-				targetNodeParam.linearRampToValueAtTime(this.sustainLevel, this.attack + this.decay);
-				targetNodeParam.linearRampToValueAtTime(this.sustainLevel, this.attack + this.decay + this.sustain);
-				targetNodeParam.linearRampToValueAtTime(0.0, this.attack + this.decay + this.sustain + this.release);
-				return targetNodeParam;
-			}
-		}
-		
-		let id = "ADSREnvelope" + this.nodeCounts.addNode(envelope, "ADSREnvelope");
-		envelope.id = id;
-		envelope.type = "ADSREnvelope";
+		let envelope = new ADSREnvelope();
+		envelope.id = (envelope.constructor.name + this.nodeCounts.addNode(envelope));
 		return envelope;
 	}
 	
-	_deleteNode(node, name=null){
+	_deleteNode(node){
 		let nodeName = node.id;
 		let nodeToDelete = this.nodeStore[nodeName].node;
 		
 		// decrement count 
-		if(name){
-			this.nodeCounts.deleteNode(node, name);
-		}else{
-			this.nodeCounts.deleteNode(node);
-		}
+		this.nodeCounts.deleteNode(node);
 		
 		// unhook all connections in the UI
 		let connectionsTo = this.nodeStore[nodeName].feedsInto;
@@ -593,14 +642,13 @@ class NodeFactory extends AudioContext {
 			});
 		}
 		
-		// need to do the same for this.nodeStore[nodeName].feedsFrom !!
 		let connectionsFrom = this.nodeStore[nodeName].feedsFrom;
 		if(connectionsFrom){
 			connectionsFrom.forEach((connection) => {
 				let svg = document.getElementById("svgCanvas:" + connection + ":" + nodeName);
 				document.getElementById("nodeArea").removeChild(svg);
 				
-				// also remove the reference of the node being deleted from this connected node's feedsFrom
+				// also remove the reference of the node being deleted from this connected node's feedsInto
 				let targetFeedsInto = this.nodeStore[connection].feedsInto;
 				this.nodeStore[connection].feedsInto = targetFeedsInto.filter(node => node !== nodeName);
 			});
@@ -655,7 +703,7 @@ class NodeFactory extends AudioContext {
 						let svg = document.getElementById("svgCanvas:" + uiElement.id + ":" + connection);
 						document.getElementById("nodeArea").removeChild(svg);
 						drawLineBetween(uiElement, document.getElementById(connection));
-					})
+					});
 				}
 				
 				if(nodeInfo.feedsFrom){
@@ -663,7 +711,7 @@ class NodeFactory extends AudioContext {
 						let svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
 						document.getElementById("nodeArea").removeChild(svg);
 						drawLineBetween(document.getElementById(connection), uiElement);
-					})
+					});
 				}
 			}
 	
@@ -797,11 +845,7 @@ class NodeFactory extends AudioContext {
 		let deleteButton = document.createElement('button');
 		deleteButton.textContent = "delete";
 		deleteButton.addEventListener('click', (evt) => {
-			if(uiElement.id.indexOf("ADSR") >= 0){
-				this._deleteNode(node, "ADSREnvelope");
-			}else{
-				this._deleteNode(node);
-			}
+			this._deleteNode(node);
 		});
 		
 		uiElement.appendChild(deleteButton);
@@ -879,8 +923,11 @@ document.getElementById('addADSRNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("ADSREnvelope");
 });
 
-soundMaker.nodeFactory.createAudioContextDestinationUI();
+document.getElementById('download').addEventListener('click', (e) => {
+	exportPreset(soundMaker.nodeFactory);
+});
 
+soundMaker.nodeFactory.createAudioContextDestinationUI();
 
 
 
