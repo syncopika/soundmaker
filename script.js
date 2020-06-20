@@ -82,10 +82,17 @@ function processNote(noteFreq, nodeFactory){
 	});
 	
 	let time = nodeFactory.audioContext.currentTime;
-	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => nodeStore[gainId].node);
+	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => nodeStore[gainId]);
 
 	gainNodes.forEach((gain) => {
-		gain.gain.setValueAtTime(gain.gain.value, time);
+		// we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
+		// maybe use dotted lines?
+		let gainNode = gain.node;
+		if(gain.feedsFrom.contains("")){
+			// if an adsr envelope feeds into this gain node, run the adsr function on the gain
+		}else{
+			gain.gain.setValueAtTime(gain.gain.value, time);
+		}
 	});
 	
 	return nodesToStart;
@@ -219,6 +226,13 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 	
 	let node = nodeInfo.node;
 	let customizableProperties = Object.keys(nodeInfo.node.__proto__);
+
+	if(customizableProperties.length === 0){
+		// i.e. for adsr envelope 
+		customizableProperties = Object.keys(nodeInfo.node).filter((prop) => typeof(nodeInfo.node[prop]) === "number");
+	}
+	//console.log(customizableProperties);
+	
 	customizableProperties.forEach((prop) => {
 		let property = document.createElement('p');
 		let text = prop;
@@ -226,15 +240,17 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 		if(node[prop].value !== undefined){
 			text += ".value";
 			isNumValue = true;
+		}else if(typeof(node[prop]) === "number"){
+			isNumValue = true;
 		}
 		property.textContent = text;
 		editWindow.appendChild(property);
 
 		if(isNumValue){
 			// what kind of param is it 
-			//console.log(prop);
-			
-			let props = valueRanges[node.constructor.name][prop];
+			// probably should refactor this. instead, make sure each NODE INSTANCE has some new field called 'nodeType' that we can use?
+			let props = valueRanges[node.constructor.name] || valueRanges[node.type];
+			props = props[prop];
 			
 			let slider = document.createElement('input');
 			slider.id = text;
@@ -315,10 +331,9 @@ class NodeFactory extends AudioContext {
 				}else{
 					this[nodeType] = 1;
 				}
-				
+
 				return this[nodeType];
 			},
-			
 			'deleteNode': function(node, nodeName=null){
 				let nodeType = nodeName || node.constructor.name;
 				this[nodeType]--;
@@ -388,6 +403,36 @@ class NodeFactory extends AudioContext {
 				}
 			},
 			"ADSREnvelope": {
+				"attack": {
+					"min": 0,
+					"default": 0,
+					"max": 1,
+					"step": 0.01
+				},
+				"sustain": {
+					"min": 0,
+					"default": 0,
+					"max": 1,
+					"step": 0.01
+				},
+				"sustainLevel": {
+					"min": 0,
+					"default": 0,
+					"max": 1,
+					"step": 0.01
+				},
+				"decay": {
+					"min": 0,
+					"default": 0,
+					"max": 1,
+					"step": 0.01
+				},
+				"release": {
+					"min": 0,
+					"default": 0,
+					"max": 10,
+					"step": 0.01
+				},
 			},
 			"waveType": [
 				"sine",
@@ -501,11 +546,25 @@ class NodeFactory extends AudioContext {
 			"attack": 0,
 			"sustain": 0,
 			"decay": 0,
-			"release": 0
+			"release": 0,
+			"sustainLevel": 0,
+			"applyADSR": function(targetNodeParam, time){
+				// targetNodeParam might be the gain property of a gain node, or a filter node for example
+				// the targetNode just needs to have fields that make sense to be manipulated with ADSR
+				// i.e. pass in gain.gain as targetNodeParam
+				// https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
+				targetNodeParam.linearRampToValueAtTime(0.0, time);
+				targetNodeParam.linearRampToValueAtTime(1.0, time + this.attack);
+				targetNodeParam.linearRampToValueAtTime(this.sustainLevel, this.attack + this.decay);
+				targetNodeParam.linearRampToValueAtTime(this.sustainLevel, this.attack + this.decay + this.sustain);
+				targetNodeParam.linearRampToValueAtTime(0.0, this.attack + this.decay + this.sustain + this.release);
+				return targetNodeParam;
+			}
 		}
 		
 		let id = "ADSREnvelope" + this.nodeCounts.addNode(envelope, "ADSREnvelope");
 		envelope.id = id;
+		envelope.type = "ADSREnvelope";
 		return envelope;
 	}
 	
@@ -609,8 +668,7 @@ class NodeFactory extends AudioContext {
 			}
 	
 			function moveNode(evt){
-				//evt.stopPropagation();
-				//evt.preventDefault();
+				evt.stopPropagation();
 				if(!evt.target.classList.contains("nodeElement")){
 					return;
 				}
@@ -799,6 +857,7 @@ class SoundMaker {
 }
 
 
+
 let soundMaker = new SoundMaker();
 document.getElementById('addWavNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("waveNode");
@@ -821,6 +880,9 @@ document.getElementById('addADSRNode').addEventListener('click', (e) => {
 });
 
 soundMaker.nodeFactory.createAudioContextDestinationUI();
+
+
+
 
 let notes = [...document.getElementsByClassName("note")];
 let currPlayingNodes = [];
@@ -848,7 +910,6 @@ function setupKeyboard(keyboard, nodeFactory){
 	});
 }
 setupKeyboard(notes, soundMaker.nodeFactory);
-
 
 
 
