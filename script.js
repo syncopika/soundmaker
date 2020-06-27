@@ -8,15 +8,6 @@ const NOTE_FREQ = {
 	"A": 440.00,
 };
 
-let currPreset = {
-	'presetName': 'preset1',
-	'numWaveNodes': 0,
-	'numNoiseNodes': 0,
-	'waveNodes': [],
-	'noiseNodes': [],
-	"notes": ""
-};
-
 ///////////////////////////////////  START
 
 function processNote(noteFreq, nodeFactory){
@@ -52,7 +43,7 @@ function processNote(noteFreq, nodeFactory){
 		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory.audioContext, templateProps);
 		nodesToStart.push(newOsc);
 		
-		// need to go down all the way to each node and make connections (breadth-first?)
+		// need to go down all the way to each node and make connections
 		// gain nodes don't need to be touched as they're already attached to the context dest by default
 		let connections = nodeStore[osc].feedsInto;
 		connections.forEach((conn) => {
@@ -162,16 +153,29 @@ function exportPreset(nodeFactory){
 		
 		let params = Object.keys(currNode.node.__proto__);
 		if(params.length === 0){
-			// i.e. for ADSREnvelope 
+			// i.e. for ADSREnvelope, which is just a regular object
 			params = Object.keys(currNode.node);
 		}
 		
 		let nodeParams = {};
 		params.forEach((param) => {
-			if(currNode.node[param].value){
+			if(typeof(currNode.node[param]) === "object" && "value" in currNode.node[param]){
 				// should just test value type instead? i.e. number vs string? if num, use value property?
 				nodeParams[param] = currNode.node[param].value;
+			}else if(currNode.node[param].constructor.name === "AudioBuffer"){
+				// handle audio buffers specially
+				let buffer = currNode.node[param];
+				let bufferProps = {};
+				for(var prop in buffer){
+					if(typeof(buffer[prop]) !== "function"){
+						bufferProps[prop] = buffer[prop];
+					}
+					// but make sure to add buffer data! assuming 1 channel here
+					bufferProps['channelData'] = buffer.getChannelData(0); 
+				}
+				nodeParams[param] = bufferProps;
 			}else{
+				// single value for this param 
 				nodeParams[param] = currNode.node[param];
 			}
 		});
@@ -536,7 +540,7 @@ class NodeFactory extends AudioContext {
 		audioCtxDest.style.height = "200px";
 		audioCtxDest.style.textAlign = "center";
 		audioCtxDest.style.position = "absolute";
-		audioCtxDest.style.top = "30%";
+		audioCtxDest.style.top = "20%";
 		audioCtxDest.style.left = "40%";
 		audioCtxDest.style.zIndex = "10";
 		let title = document.createElement("h2");
