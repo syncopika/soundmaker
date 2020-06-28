@@ -1,0 +1,34 @@
+heavily inspired by: https://lcrespom.github.io/live-coding/
+
+https://javascript.info/mouse-drag-and-drop
+http://blog.greggant.com/posts/2018/10/16/drawing-svg-lines-between-multiple-dom-objects.html
+https://webhint.io/docs/user-guide/hints/hint-create-element-svg/
+https://stackoverflow.com/questions/41161094/dynamically-created-svg-elements-are-not-rendered-by-the-browser
+
+https://css-tricks.com/absolute-positioning-inside-relative-positioning/
+https://stackoverflow.com/questions/18932241/css-positioning-of-divs-absolute-within-relative/21740612
+
+https://stackoverflow.com/questions/20387534/prevent-mousedown-event-on-input-range-html-element-and-still-let-user-drag-slid/52007221
+https://github.com/lcrespom/Modulator/blob/master/src/synth/notes
+https://github.com/mohayonao/adsr-envelope
+https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Advanced_techniques
+https://blog.chrislowis.co.uk/2013/06/17/synthesis-web-audio-api-envelopes.html
+https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
+https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
+https://theproaudiofiles.com/synthesis-101-envelope-parameters-uses/
+
+// todo:
+- instead of adding the oscillator reference to the nodeStore, just add a dict of props. actually, do that for all nodes.
+
+
+// other random notes:
+ADSREnvelope {attack: 0.54, sustain: 0, decay: 0.53, release: 0, sustainLevel: 0, …
+
+- when refactoring, keep these things in mind?:
+	- split up the files. i.e. ADSREnvelope class should get its own file. you'll need that applyADSR code in the piano roll app too, unless you can actually define functions in json?
+	- the UI modification code (i.e. drawing the svg lines, node elements) maybe could be its own class? something like UIModifier or UIEditor.
+	
+- there should be a distinction between connecting nodes and connecting to audio params. use a dotted line for params? also,
+  arrows for the lines would be helpful.
+
+- an actual keyboard image for note playback would be nice.
