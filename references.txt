@@ -1,4 +1,4 @@
-https://lcrespom.github.io/live-coding/
+heavily inspired by: https://lcrespom.github.io/live-coding/
 
 https://javascript.info/mouse-drag-and-drop
 http://blog.greggant.com/posts/2018/10/16/drawing-svg-lines-between-multiple-dom-objects.html
@@ -28,3 +28,7 @@ ADSREnvelope {attack: 0.54, sustain: 0, decay: 0.53, release: 0, sustainLevel: 
 	- split up the files. i.e. ADSREnvelope class should get its own file. you'll need that applyADSR code in the piano roll app too, unless you can actually define functions in json?
 	- the UI modification code (i.e. drawing the svg lines, node elements) maybe could be its own class? something like UIModifier or UIEditor.
 	
+- there should be a distinction between connecting nodes and connecting to audio params. use a dotted line for params? also,
+  arrows for the lines would be helpful.
+
+- an actual keyboard image for note playback would be nice.
