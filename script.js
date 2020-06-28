@@ -185,9 +185,11 @@ function exportPreset(nodeFactory){
 	});
 	
 	//console.log(objToExport);
+	let theData = {};
+	theData["name"] = fileName;
+	theData["data"] = objToExport;
 	
-	
-	let blob = new Blob([JSON.stringify(objToExport, null, 2)], {type: "application/json"});
+	let blob = new Blob([JSON.stringify(theData, null, 2)], {type: "application/json"});
 	//make a url for that blob
 	let url = URL.createObjectURL(blob);
 	
@@ -305,7 +307,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			slider.setAttribute('max', props ? props['max'] : 0.5);
 			slider.setAttribute('min', props ? props['min'] : 0.0);
 			slider.setAttribute('step', props ? props['step'] : 0.01);
-			slider.setAttribute('value', props ? props['default'] : 0.0);
+			slider.setAttribute('value', node[prop].value ? node[prop].value : props['default']);
 			
 			let label = document.createElement('span');
 			label.id = text;
@@ -317,7 +319,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 				
 				// update node
 				// probably should refactor (shouldn't have to check value prop?)
-				if(node[prop].value){
+				if(node[prop].value !== undefined){
 					node[prop].value = newVal;
 				}else{
 					node[prop] = newVal;
