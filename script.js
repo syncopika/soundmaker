@@ -203,7 +203,6 @@ function exportPreset(nodeFactory){
 
 
 
-
 function importInstrumentPreset(){
 	let input = document.getElementById('importInstrumentPresetInput');
 	input.addEventListener('change', processInstrumentPreset, false);
@@ -330,6 +329,20 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			
 			editBox.value = slider.getAttribute('value');
 			editBox.style.fontFamily = "monospace";
+			editBox.addEventListener('input', (evt) => {
+				// evaluate the new value. 
+				// if it's a valid value, update the param it belongs to.
+				let inputtedValue = parseFloat(evt.target.value);
+				if(inputtedValue >= parseFloat(slider.getAttribute('min')) &&
+					inputtedValue <= parseFloat(slider.getAttribute('max'))){
+						slider.setAttribute('value', inputtedValue);
+						if(node[prop].value !== undefined){
+							node[prop].value = inputtedValue;
+						}else{
+							node[prop] = inputtedValue;
+						}
+				}				
+			});
 			
 			slider.addEventListener('input', function(evt){
 				let newVal = parseFloat(evt.target.value);
