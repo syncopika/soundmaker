@@ -40,7 +40,7 @@ function processNote(noteFreq, nodeFactory){
 			}
 		});
 		
-		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory.audioContext, templateProps);
+		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory, templateProps);
 		nodesToStart.push(newOsc);
 		
 		// need to go down all the way to each node and make connections
@@ -72,7 +72,7 @@ function processNote(noteFreq, nodeFactory){
 		});
 	});
 	
-	let time = nodeFactory.audioContext.currentTime;
+	let time = nodeFactory.currentTime;
 	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => nodeStore[gainId]);
 
 	gainNodes.forEach((gain) => {
@@ -203,7 +203,6 @@ function exportPreset(nodeFactory){
 
 
 
-
 function importInstrumentPreset(){
 	let input = document.getElementById('importInstrumentPresetInput');
 	input.addEventListener('change', processInstrumentPreset, false);
@@ -225,7 +224,7 @@ function processInstrumentPreset(e){
 	reader.readAsText(file);
 }
 
-function drawLineBetween(htmlElement1, htmlElement2){
+function drawLineBetween(htmlElement1, htmlElement2, dash=false){
 	
 	// instead, we should create an individual svg per line
 	let svg = document.getElementById("svgCanvas");
@@ -244,6 +243,11 @@ function drawLineBetween(htmlElement1, htmlElement2){
 	line.classList.add('line');
 	line.setAttribute('stroke', '#000');
 	line.setAttribute('stroke-width', '1px');
+	
+	if(dash){
+		// for dotted lines
+		line.setAttribute('stroke-dasharray', 10); // is this number ok?
+	}
 	
 	let element1x = htmlElement1.offsetLeft + document.body.scrollLeft + ((htmlElement1.offsetWidth)/2);
 	let element1y = htmlElement1.offsetTop + document.body.scrollTop + ((htmlElement1.offsetHeight)/2);
@@ -280,7 +284,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 		// i.e. for adsr envelope 
 		customizableProperties = Object.keys(nodeInfo.node).filter((prop) => typeof(nodeInfo.node[prop]) === "number");
 	}
-	
+	//console.log(node);
 	customizableProperties.forEach((prop) => {
 		let property = document.createElement('p');
 		let text = prop;
@@ -307,15 +311,42 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			slider.setAttribute('max', props ? props['max'] : 0.5);
 			slider.setAttribute('min', props ? props['min'] : 0.0);
 			slider.setAttribute('step', props ? props['step'] : 0.01);
-			slider.setAttribute('value', node[prop].value ? node[prop].value : props['default']);
 			
-			let label = document.createElement('span');
-			label.id = text;
-			label.textContent = slider.getAttribute('value');
+			// also allow value input via text edit box 
+			let editBox = document.createElement('input');
+			editBox.id = text + '-edit';
+			editBox.setAttribute('size', 6);
+			editBox.setAttribute('type', 'text');
+			
+			if(node[prop].value){
+				slider.setAttribute('value', node[prop].value);
+			}else if(typeof(node[prop]) === "number"){
+				// relevant to the ADSR envelope
+				slider.setAttribute('value', node[prop]);
+			}else{
+				slider.setAttribute('value', props['default']);
+			}
+			
+			editBox.value = slider.getAttribute('value');
+			editBox.style.fontFamily = "monospace";
+			editBox.addEventListener('input', (evt) => {
+				// evaluate the new value. 
+				// if it's a valid value, update the param it belongs to.
+				let inputtedValue = parseFloat(evt.target.value);
+				if(inputtedValue >= parseFloat(slider.getAttribute('min')) &&
+					inputtedValue <= parseFloat(slider.getAttribute('max'))){
+						slider.setAttribute('value', inputtedValue);
+						if(node[prop].value !== undefined){
+							node[prop].value = inputtedValue;
+						}else{
+							node[prop] = inputtedValue;
+						}
+				}				
+			});
 			
 			slider.addEventListener('input', function(evt){
 				let newVal = parseFloat(evt.target.value);
-				label.textContent = newVal;
+				editBox.value = newVal;
 				
 				// update node
 				// probably should refactor (shouldn't have to check value prop?)
@@ -327,9 +358,10 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			});
 			
 			editWindow.appendChild(slider);
+			editWindow.appendChild(editBox);
 			editWindow.appendChild(document.createElement('br'));
-			editWindow.appendChild(label);
 			editWindow.appendChild(document.createElement('br'));
+			
 		}else{
 			if(prop === "type"){
 				editWindow.appendChild(property);
@@ -363,6 +395,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 
 
 class ADSREnvelope {
+	
 	constructor(){
 		this.attack = 0;
 		this.sustain = 0;
@@ -394,13 +427,7 @@ class NodeFactory extends AudioContext {
 		super();
 		
 		this.nodeColors = {}; // different background color for each kind of node element?
-		
-		this.audioContext = new AudioContext();
-		this.audioContext.suspend();
-		
 		this.nodeStore = {};  // store refs for nodes
-		this._storeNode(this.audioContext.destination, this.audioContext.destination.constructor.name);
-		
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
 			// use nodeName if supplied
@@ -534,7 +561,7 @@ class NodeFactory extends AudioContext {
 	
 	createAudioContextDestinationUI(){
 		let audioCtxDest = document.createElement('div');
-		audioCtxDest.id = this.audioContext.destination.constructor.name;
+		audioCtxDest.id = this.destination.constructor.name;
 		audioCtxDest.style.border = "1px solid #000";
 		audioCtxDest.style.borderRadius = "20px 20px 20px 20px";
 		audioCtxDest.style.padding = "5px";
@@ -543,7 +570,7 @@ class NodeFactory extends AudioContext {
 		audioCtxDest.style.textAlign = "center";
 		audioCtxDest.style.position = "absolute";
 		audioCtxDest.style.top = "20%";
-		audioCtxDest.style.left = "40%";
+		audioCtxDest.style.left = "50%";
 		audioCtxDest.style.zIndex = "10";
 		let title = document.createElement("h2");
 		title.textContent = "audio context destination";
@@ -564,11 +591,11 @@ class NodeFactory extends AudioContext {
 	// methods for node creation. I'm thinking of them as 'private' methods because
 	// they'll be used in other methods that are more useful and should be called on a NodeFactory instance
 	_createWaveNode(){
-		// NOTE THAT OSCILLATOR NODES CAN ONLY BE STARTED/STOPPED ONCE!
+		// REMEMBER THAT OSCILLATOR NODES CAN ONLY BE STARTED/STOPPED ONCE!
 		// when a note is played multiple times, each time a new oscillator needs to 
 		// be created. but we can save the properties of the oscillator and reuse that data.
 		// so basically we create a dummy oscillator for the purposes of storing information (as a template)
-		let osc = this.audioContext.createOscillator();
+		let osc = this.createOscillator();
 		// default params 
 		osc.frequency.value = 440; // A @ 440 Hz
 		osc.detune.value = 0;
@@ -579,11 +606,11 @@ class NodeFactory extends AudioContext {
 	
 	_createNoiseNode(){
 		// allow user to pass in the contents of the noise buffer as a list if they want to?
-		let noise = this.audioContext.createBufferSource();
+		let noise = this.createBufferSource();
 		
 		// assign random noise first, but let it be customizable
-		let bufSize = this.audioContext.sampleRate; // customizable?
-		let buffer = this.audioContext.createBuffer(1, bufSize, bufSize);
+		let bufSize = this.sampleRate; // customizable?
+		let buffer = this.createBuffer(1, bufSize, bufSize);
 		
 		let output = buffer.getChannelData(0);
 		for(let i = 0; i < bufSize; i++){
@@ -596,9 +623,9 @@ class NodeFactory extends AudioContext {
 	}
 	
 	_createGainNode(){
-		let gainNode = this.audioContext.createGain();
+		let gainNode = this.createGain();
 		// gain will alwaays need to attach to context destination
-		gainNode.connect(this.audioContext.destination);
+		gainNode.connect(this.destination);
 		gainNode.gain.value = this.valueRanges.GainNode.gain.default;
 		gainNode.id = (gainNode.constructor.name + this.nodeCounts.addNode(gainNode));
 		return gainNode;
@@ -606,7 +633,7 @@ class NodeFactory extends AudioContext {
 	
 	// create a biquadfilter node
 	_createBiquadFilterNode(){
-		let bqFilterNode = this.audioContext.createBiquadFilter();
+		let bqFilterNode = this.createBiquadFilter();
 		bqFilterNode.frequency.value = 440;
 		bqFilterNode.detune.value = 0;
 		bqFilterNode.Q.value = 1;
@@ -708,7 +735,11 @@ class NodeFactory extends AudioContext {
 					nodeInfo.feedsInto.forEach((connection) => {
 						let svg = document.getElementById("svgCanvas:" + uiElement.id + ":" + connection);
 						document.getElementById("nodeArea").removeChild(svg);
-						drawLineBetween(uiElement, document.getElementById(connection));
+						if(uiElement.id.indexOf("ADSR") >= 0){
+							drawLineBetween(uiElement, document.getElementById(connection), true);
+						}else{
+							drawLineBetween(uiElement, document.getElementById(connection));
+						}
 					});
 				}
 				
@@ -716,7 +747,11 @@ class NodeFactory extends AudioContext {
 					nodeInfo.feedsFrom.forEach((connection) => {
 						let svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
 						document.getElementById("nodeArea").removeChild(svg);
-						drawLineBetween(document.getElementById(connection), uiElement);
+						if(connection.indexOf("ADSR") >= 0){
+							drawLineBetween(document.getElementById(connection), uiElement, true);
+						}else{
+							drawLineBetween(document.getElementById(connection), uiElement);
+						}
 					});
 				}
 			}
@@ -782,7 +817,11 @@ class NodeFactory extends AudioContext {
 				destConnections["feedsFrom"].push(source.id);
 				
 				// update UI to show link between nodes
-				drawLineBetween(source, target);
+				if(source.id.indexOf("ADSR") >= 0){
+					drawLineBetween(source, target, true);
+				}else{
+					drawLineBetween(source, target);
+				}
 				
 				// remove the event listeners needed to form the new connection 
 				// from all the nodes
@@ -890,7 +929,7 @@ class NodeFactory extends AudioContext {
 		
 		if(nodeType === "gainNode"){
 			// gain node is special :)
-			let audioCtx = this.audioContext.destination.constructor.name;
+			let audioCtx = this.destination.constructor.name;
 			this.nodeStore[newNode.id]["feedsInto"] = [audioCtx];
 			this.nodeStore[audioCtx]["feedsFrom"].push(newNode.id);
 			drawLineBetween(document.getElementById(newNode.id), document.getElementById(audioCtx)); // order matters! :0
@@ -903,6 +942,13 @@ class NodeFactory extends AudioContext {
 class SoundMaker {
 	constructor(){
 		this.nodeFactory = new NodeFactory();
+		this.nodeFactory.suspend(); // need to suspend audio context (which a node factory is) initially
+		
+		// store the audio context's destination as a node
+		this.nodeFactory._storeNode(
+			this.nodeFactory.destination, 
+			this.nodeFactory.destination.constructor.name
+		);
 	}
 }
 
@@ -941,7 +987,7 @@ let notes = [...document.getElementsByClassName("note")];
 let currPlayingNodes = [];
 
 function setupKeyboard(keyboard, nodeFactory){
-	let audioContext = nodeFactory.audioContext;
+	let audioContext = nodeFactory;
 	notes.forEach((note) => {
 		note.addEventListener('mouseup', (evt) => {
 			currPlayingNodes.forEach((osc) => {
