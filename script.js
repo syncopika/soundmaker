@@ -718,7 +718,6 @@ class NodeFactory extends AudioContext {
 				if(nodeInfo.feedsFrom){
 					nodeInfo.feedsFrom.forEach((connection) => {
 						let svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
-						console.log(svg);
 						document.getElementById("nodeArea").removeChild(svg);
 						if(connection.indexOf("ADSR") >= 0){
 							drawLineBetween(document.getElementById(connection), uiElement, true);
@@ -791,9 +790,9 @@ class NodeFactory extends AudioContext {
 				
 				// update UI to show link between nodes
 				if(source.id.indexOf("ADSR") >= 0){
-					drawLineBetween(target, source, true);
+					drawLineBetween(source, target, true);
 				}else{
-					drawLineBetween(target, source);
+					drawLineBetween(source, target);
 				}
 				
 				// remove the event listeners needed to form the new connection 
