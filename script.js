@@ -285,7 +285,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 		// i.e. for adsr envelope 
 		customizableProperties = Object.keys(nodeInfo.node).filter((prop) => typeof(nodeInfo.node[prop]) === "number");
 	}
-	
+	//console.log(node);
 	customizableProperties.forEach((prop) => {
 		let property = document.createElement('p');
 		let text = prop;
@@ -312,15 +312,28 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			slider.setAttribute('max', props ? props['max'] : 0.5);
 			slider.setAttribute('min', props ? props['min'] : 0.0);
 			slider.setAttribute('step', props ? props['step'] : 0.01);
-			slider.setAttribute('value', node[prop].value ? node[prop].value : props['default']);
 			
-			let label = document.createElement('span');
-			label.id = text;
-			label.textContent = slider.getAttribute('value');
+			// also allow value input via text edit box 
+			let editBox = document.createElement('input');
+			editBox.id = text + '-edit';
+			editBox.setAttribute('size', 6);
+			editBox.setAttribute('type', 'text');
+			
+			if(node[prop].value){
+				slider.setAttribute('value', node[prop].value);
+			}else if(typeof(node[prop]) === "number"){
+				// relevant to the ADSR envelope
+				slider.setAttribute('value', node[prop]);
+			}else{
+				slider.setAttribute('value', props['default']);
+			}
+			
+			editBox.value = slider.getAttribute('value');
+			editBox.style.fontFamily = "monospace";
 			
 			slider.addEventListener('input', function(evt){
 				let newVal = parseFloat(evt.target.value);
-				label.textContent = newVal;
+				editBox.value = newVal;
 				
 				// update node
 				// probably should refactor (shouldn't have to check value prop?)
@@ -332,9 +345,10 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			});
 			
 			editWindow.appendChild(slider);
+			editWindow.appendChild(editBox);
 			editWindow.appendChild(document.createElement('br'));
-			editWindow.appendChild(label);
 			editWindow.appendChild(document.createElement('br'));
+			
 		}else{
 			if(prop === "type"){
 				editWindow.appendChild(property);
@@ -368,6 +382,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 
 
 class ADSREnvelope {
+	
 	constructor(){
 		this.attack = 0;
 		this.sustain = 0;
