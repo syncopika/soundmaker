@@ -618,6 +618,7 @@ class NodeFactory extends AudioContext {
 		}
 		
 		noise.buffer = buffer;
+		noise.loop = true;
 		noise.id = (noise.constructor.name + this.nodeCounts.addNode(noise));
 		return noise;
 	}
