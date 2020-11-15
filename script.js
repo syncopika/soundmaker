@@ -23,7 +23,6 @@ function processNote(noteFreq, nodeFactory){
 	// probably should look at not just osc nodes but those with 0 input.
 	// i.e. OscillatorNodes, AudioBufferSourceNodes
 	let oscNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
-	//console.log(oscNodes);
 	
 	let nodesToStart = [];
 	oscNodes.forEach((osc) => {
@@ -166,7 +165,7 @@ function exportPreset(nodeFactory){
 				// handle audio buffers specially
 				let buffer = currNode.node[param];
 				let bufferProps = {};
-				for(var prop in buffer){
+				for(let prop in buffer){
 					if(typeof(buffer[prop]) !== "function"){
 						bufferProps[prop] = buffer[prop];
 					}
@@ -987,6 +986,7 @@ soundMaker.nodeFactory.createAudioContextDestinationUI();
 let notes = [...document.getElementsByClassName("note")];
 let currPlayingNodes = [];
 
+// set up the keyboard for playing notes
 function setupKeyboard(keyboard, nodeFactory){
 	let audioContext = nodeFactory;
 	notes.forEach((note) => {
@@ -997,15 +997,17 @@ function setupKeyboard(keyboard, nodeFactory){
 		});
 		
 		note.addEventListener('mousedown', (evt) => {
-			audioContext.resume().then(() => {
-				//processNote(event.toElement.innerHTML, audioContext, currPreset);
-				let noteFreq = NOTE_FREQ[note.textContent];
-				//console.log(noteFreq);
-				currPlayingNodes = processNote(noteFreq, nodeFactory);
-				currPlayingNodes.forEach((osc) => {
-					osc.start(0);
+			if(evt.buttons === 1){
+				audioContext.resume().then(() => {
+					//processNote(event.toElement.innerHTML, audioContext, currPreset);
+					let noteFreq = NOTE_FREQ[note.textContent];
+					//console.log(noteFreq);
+					currPlayingNodes = processNote(noteFreq, nodeFactory);
+					currPlayingNodes.forEach((osc) => {
+						osc.start(0);
+					});
 				});
-			});
+			}
 		});
 	});
 }
