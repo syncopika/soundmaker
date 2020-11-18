@@ -22,7 +22,7 @@ function processNote(noteFreq, nodeFactory){
 	
 	// probably should look at not just osc nodes but those with 0 input.
 	// i.e. OscillatorNodes, AudioBufferSourceNodes
-	let oscNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
+	let oscNodes = nodeFactory.getOscNodes();
 	
 	let nodesToStart = [];
 	oscNodes.forEach((osc) => {
@@ -72,17 +72,17 @@ function processNote(noteFreq, nodeFactory){
 	});
 	
 	let time = nodeFactory.currentTime;
-	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => nodeStore[gainId]);
+	let gainNodes = nodeFactory.getGainNodes();
 
 	gainNodes.forEach((gain) => {
 		// we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
 		// maybe use dotted lines?
 		let gainNode = gain.node;
+		console.log(gain);
 		let adsr = getADSRFeed(gain);
 		if(adsr){
 			// if an adsr envelope feeds into this gain node, run the adsr function on the gain
 			let envelope = nodeStore[adsr].node;
-			//console.log(envelope);
 			envelope.applyADSR(gainNode.gain, time);
 		}else{
 			gainNode.gain.setValueAtTime(gainNode.gain.value, time);
@@ -91,7 +91,7 @@ function processNote(noteFreq, nodeFactory){
 	
 	return nodesToStart;
 }
-
+		
 function getADSRFeed(sinkNode){
 	// check if sinkNode has an ADSR envelope
 	let feedsFrom = sinkNode.feedsFrom;
@@ -131,6 +131,8 @@ class ADSREnvelope {
 		targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack);
 		targetNodeParam.linearRampToValueAtTime(baseParamVal * sustainLevel, start + this.attack + this.decay);
 		targetNodeParam.linearRampToValueAtTime(baseParamVal * sustainLevel, start + this.attack + this.decay + this.sustain);
+		
+		// if note is being held, don't do this.
 		targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack + this.decay + this.sustain + this.release); // what should this be if you're holding the note?
 		return targetNodeParam;
 	}
@@ -273,6 +275,14 @@ class NodeFactory extends AudioContext {
 			],
 		}
 	} // end constructor
+	
+	getGainNodes(){
+		return [...Object.keys(this.nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => this.nodeStore[gainId]);
+	}
+	
+	getOscNodes(){
+		return [...Object.keys(this.nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
+	}
 	
 	createAudioContextDestinationUI(){
 		let audioCtxDest = document.createElement('div');
@@ -708,16 +718,24 @@ function setupKeyboard(keyboard, nodeFactory){
 	notes.forEach((note) => {
 		note.addEventListener('mouseup', (evt) => {
 			currPlayingNodes.forEach((osc) => {
+				
+				// if adsr, need to stop depending on release param
+				/*
+				let nodeStore = nodeFactory.nodeStore;
+				gainNodes.forEach((gain) => {
+					let gainNode = gain.node;
+					let adsr = getADSRFeed(gain);
+				});
+				*/
 				osc.stop(audioContext.currentTime);
+				
 			});
 		});
 		
 		note.addEventListener('mousedown', (evt) => {
 			if(evt.buttons === 1){
 				audioContext.resume().then(() => {
-					//processNote(event.toElement.innerHTML, audioContext, currPreset);
 					let noteFreq = NOTE_FREQ[note.textContent];
-					//console.log(noteFreq);
 					currPlayingNodes = processNote(noteFreq, nodeFactory);
 					currPlayingNodes.forEach((osc) => {
 						osc.start(0);
