@@ -443,7 +443,6 @@ class NodeFactory extends AudioContext {
 		
 		let nodeInfo = this.nodeStore[node.id];
 		
-		// on MOUSEDOWN
 		uiElement.addEventListener("mousedown", (evt) => {
 
 			let offsetX = evt.clientX - uiElement.offsetLeft + window.pageXOffset;
@@ -677,7 +676,9 @@ class SoundMaker {
 
 
 
+////////////////////////// SET UP
 let soundMaker = new SoundMaker();
+
 document.getElementById('addWavNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("waveNode");
 });
