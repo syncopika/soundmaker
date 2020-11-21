@@ -49,6 +49,8 @@ function drawLineBetween(htmlElement1, htmlElement2, dash=false){
 
 function showParameterEditWindow(nodeInfo, valueRanges){
 	let editWindow = document.getElementById("editNode");
+	editWindow.style.display = "block";
+	
 	while(editWindow.firstChild){
 		editWindow.removeChild(editWindow.firstChild);
 	}
@@ -118,6 +120,11 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 						slider.setAttribute('value', inputtedValue);
 						if(node[prop].value !== undefined){
 							node[prop].value = inputtedValue;
+							// also add it as a desired param value in a separate property
+							// this is so that if we're working with an ADSR envelope on a gain node
+							// we know the desired base value. we shouldn't rely on the actual value param to know that
+							// since that will be variable and subject to change.
+							node[prop].baseValue = inputtedValue;
 						}else{
 							node[prop] = inputtedValue;
 						}
@@ -132,6 +139,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 				// probably should refactor (shouldn't have to check value prop?)
 				if(node[prop].value !== undefined){
 					node[prop].value = newVal;
+					node[prop].baseValue = newVal;
 				}else{
 					node[prop] = newVal;
 				}
@@ -170,8 +178,16 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			}
 		}
 	});
+	
+	// allow user to close param edit window
+	let hideWindow = document.createElement('p');
+	hideWindow.textContent = 'close';
+	hideWindow.style.color = "#ff0000";
+	hideWindow.addEventListener('click', (evt) => {
+		editWindow.style.display = "none";
+	});
+	editWindow.appendChild(hideWindow);
 }
-
 
 
 /***

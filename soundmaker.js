@@ -8,18 +8,11 @@ const NOTE_FREQ = {
 	"A": 440.00,
 };
 
-///////////////////////////////////  START
-
 function processNote(noteFreq, nodeFactory){
+	// this is used to create and use new nodes each time a note needs to be played
+	
 	let nodeStore = nodeFactory.nodeStore;
-	//console.log(nodeStore);
-	
-	// k so this is what we need to do:
-	// look for all the oscillator nodes 
-	// create new oscillator nodes based on the props of the ones in nodeStore (those are templates)
-	// then! follow the graph -> make sure to hook up the oscillator nodes to the right feedsInto nodes 
-	// lastly, grab all the gain nodes and play!
-	
+
 	// probably should look at not just osc nodes but those with 0 input.
 	// i.e. OscillatorNodes, AudioBufferSourceNodes
 	let oscNodes = nodeFactory.getOscNodes();
@@ -30,6 +23,7 @@ function processNote(noteFreq, nodeFactory){
 		// create a new osc node from the template props
 		let oscTemplateNode = nodeStore[osc].node;
 		let templateProps = {};
+		
 		Object.keys(oscTemplateNode.__proto__).forEach((propName) => {
 			let prop = oscTemplateNode[propName];
 			templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
@@ -78,7 +72,6 @@ function processNote(noteFreq, nodeFactory){
 		// we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
 		// maybe use dotted lines?
 		let gainNode = gain.node;
-		console.log(gain);
 		let adsr = getADSRFeed(gain);
 		if(adsr){
 			// if an adsr envelope feeds into this gain node, run the adsr function on the gain
@@ -120,8 +113,9 @@ class ADSREnvelope {
 		// the targetNode just needs to have fields that make sense to be manipulated with ADSR
 		// i.e. pass in gain.gain as targetNodeParam
 		// https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
-		//let targetNodeParam = targetNode[param];
-		let baseParamVal = targetNodeParam.value; // i.e. gain.gain.value. this value will be the max value that the ADSR envelope will cover (the peak of the amplitude)
+		
+		// only assuming node params that are objects (and have a value field)
+		let baseParamVal = targetNodeParam.baseValue; // i.e. gain.gain.value. this value will be the max value that the ADSR envelope will cover (the peak of the amplitude)
 
 		// TODO: this needs to be looked at more closely. what does a value of 0 mean?
 		// sustainLevel should be the level that the ADSR drops off to after hitting the peak, which is baseParamVal
@@ -133,7 +127,7 @@ class ADSREnvelope {
 		targetNodeParam.linearRampToValueAtTime(baseParamVal * sustainLevel, start + this.attack + this.decay + this.sustain);
 		
 		// if note is being held, don't do this.
-		targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack + this.decay + this.sustain + this.release); // what should this be if you're holding the note?
+		//targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack + this.decay + this.sustain + this.release);
 		return targetNodeParam;
 	}
 }
@@ -353,6 +347,10 @@ class NodeFactory extends AudioContext {
 		// gain will alwaays need to attach to context destination
 		gainNode.connect(this.destination);
 		gainNode.gain.value = this.valueRanges.GainNode.gain.default;
+		
+		// use this property to remember the desired base volume value
+		gainNode.gain.baseValue = this.valueRanges.GainNode.gain.default;
+		
 		gainNode.id = (gainNode.constructor.name + this.nodeCounts.addNode(gainNode));
 		return gainNode;
 	}
@@ -432,7 +430,6 @@ class NodeFactory extends AudioContext {
 	
 	_createNodeUIElement(node){
 		// add event listener to allow it to be hooked up to another node if possible
-		//let customizableProperties = Object.keys(node.__proto__);
 		let uiElement = document.createElement('div');
 		uiElement.style.backgroundColor = "#fff";
 		uiElement.style.zIndex = 10;
@@ -717,18 +714,27 @@ function setupKeyboard(keyboard, nodeFactory){
 	let audioContext = nodeFactory;
 	notes.forEach((note) => {
 		note.addEventListener('mouseup', (evt) => {
+			
+			let maxEndTime = audioContext.currentTime;
+			
+			// apply adsr release, if any
+			let gainNodes = nodeFactory.getGainNodes();
+			gainNodes.forEach((gain) => {
+				let gainNode = gain.node;
+				let adsr = getADSRFeed(gain);
+				if(adsr){
+					let envelope = nodeFactory.nodeStore[adsr].node;
+					gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
+					maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
+				}else{
+					gainNode.gain.setValueAtTime(0.0, audioContext.currentTime);
+				}
+			});
+			
+			// maybe we don't need to shut off oscillators if setting gain to 0?
+			// we're going to throw these nodes away anyway
 			currPlayingNodes.forEach((osc) => {
-				
-				// if adsr, need to stop depending on release param
-				/*
-				let nodeStore = nodeFactory.nodeStore;
-				gainNodes.forEach((gain) => {
-					let gainNode = gain.node;
-					let adsr = getADSRFeed(gain);
-				});
-				*/
-				osc.stop(audioContext.currentTime);
-				
+				osc.stop(maxEndTime);
 			});
 		});
 		
