@@ -416,6 +416,8 @@ class NodeFactory extends AudioContext {
 		
 		// clear UI
 		document.getElementById('nodeArea').removeChild(document.getElementById(nodeName));
+		
+		console.log(this)
 	}
 	
 	_addNodeToInterface(node, x, y){
@@ -727,13 +729,12 @@ function setupKeyboard(keyboard, nodeFactory){
 					let envelope = nodeFactory.nodeStore[adsr].node;
 					gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
 					maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
-				}else{
-					gainNode.gain.setValueAtTime(0.0, audioContext.currentTime);
+					
+					// also reset gain value back to whatever it's currently set at
+					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.1);
 				}
 			});
-			
-			// maybe we don't need to shut off oscillators if setting gain to 0?
-			// we're going to throw these nodes away anyway
+
 			currPlayingNodes.forEach((osc) => {
 				osc.stop(maxEndTime);
 			});
