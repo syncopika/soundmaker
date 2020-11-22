@@ -2,13 +2,9 @@
 - BUG: the connection between a biquadfilter and a gain node doesn't seem to get reflected in the exported json. i.e. for the 
 biquadfilter you get an empty "feedsInto" list when it should have the gain node. try osc -> biquad -> gain.
 
-- instead of adding the oscillator reference to the nodeStore, just add a dict of props. actually, do that for all nodes.
+- import preset
+    - clear out any existing nodes (even gain nodes?)
 
-- use the release param for ADSR on mouseup to determine when the note should be silenced.
-- when storing the nodes, keep track of the desired gain value (and other params) - don't just set the gain node's gain value to
-  the desired one. this is because when the ADSR envelope is active for a variable amount of time, the gain value will remain
-  at whereever it was on mouseup. it could be < than the desired gain value on the next mousedown as a result. so anyway,
-  the baseParamValue should always be the desired value, not reading off the existing value of the node.
 
 - show the ADSR curve
 - better keyboard + mini piano roll maybe?
