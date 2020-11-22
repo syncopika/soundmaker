@@ -416,8 +416,6 @@ class NodeFactory extends AudioContext {
 		
 		// clear UI
 		document.getElementById('nodeArea').removeChild(document.getElementById(nodeName));
-		
-		console.log(this)
 	}
 	
 	_addNodeToInterface(node, x, y){
@@ -731,7 +729,12 @@ function setupKeyboard(keyboard, nodeFactory){
 					maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
 					
 					// also reset gain value back to whatever it's currently set at
-					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.1);
+					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
+				}else{
+					// slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
+					// wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
+					// maybe we should fix gain stuff on mousedown instead?
+					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
 				}
 			});
 

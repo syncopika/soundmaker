@@ -101,7 +101,9 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			editBox.setAttribute('type', 'text');
 			
 			if(node[prop].value){
-				slider.setAttribute('value', node[prop].value);
+				// use the base value, which is the current user-desired value, 
+				// not the actual current value (i.e. for gain)
+				slider.setAttribute('value', node[prop].baseValue);
 			}else if(typeof(node[prop]) === "number"){
 				// relevant to the ADSR envelope
 				slider.setAttribute('value', node[prop]);
@@ -117,7 +119,9 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 				let inputtedValue = parseFloat(evt.target.value);
 				if(inputtedValue >= parseFloat(slider.getAttribute('min')) &&
 					inputtedValue <= parseFloat(slider.getAttribute('max'))){
+						
 						slider.setAttribute('value', inputtedValue);
+						
 						if(node[prop].value !== undefined){
 							node[prop].value = inputtedValue;
 							// also add it as a desired param value in a separate property
