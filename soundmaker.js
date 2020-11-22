@@ -8,22 +8,14 @@ const NOTE_FREQ = {
 	"A": 440.00,
 };
 
-///////////////////////////////////  START
-
 function processNote(noteFreq, nodeFactory){
+	// this is used to create and use new nodes each time a note needs to be played
+	
 	let nodeStore = nodeFactory.nodeStore;
-	//console.log(nodeStore);
-	
-	// k so this is what we need to do:
-	// look for all the oscillator nodes 
-	// create new oscillator nodes based on the props of the ones in nodeStore (those are templates)
-	// then! follow the graph -> make sure to hook up the oscillator nodes to the right feedsInto nodes 
-	// lastly, grab all the gain nodes and play!
-	
+
 	// probably should look at not just osc nodes but those with 0 input.
 	// i.e. OscillatorNodes, AudioBufferSourceNodes
-	let oscNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
-	//console.log(oscNodes);
+	let oscNodes = nodeFactory.getOscNodes();
 	
 	let nodesToStart = [];
 	oscNodes.forEach((osc) => {
@@ -31,6 +23,7 @@ function processNote(noteFreq, nodeFactory){
 		// create a new osc node from the template props
 		let oscTemplateNode = nodeStore[osc].node;
 		let templateProps = {};
+		
 		Object.keys(oscTemplateNode.__proto__).forEach((propName) => {
 			let prop = oscTemplateNode[propName];
 			templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
@@ -73,7 +66,7 @@ function processNote(noteFreq, nodeFactory){
 	});
 	
 	let time = nodeFactory.currentTime;
-	let gainNodes = [...Object.keys(nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => nodeStore[gainId]);
+	let gainNodes = nodeFactory.getGainNodes();
 
 	gainNodes.forEach((gain) => {
 		// we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
@@ -83,7 +76,6 @@ function processNote(noteFreq, nodeFactory){
 		if(adsr){
 			// if an adsr envelope feeds into this gain node, run the adsr function on the gain
 			let envelope = nodeStore[adsr].node;
-			//console.log(envelope);
 			envelope.applyADSR(gainNode.gain, time);
 		}else{
 			gainNode.gain.setValueAtTime(gainNode.gain.value, time);
@@ -92,7 +84,7 @@ function processNote(noteFreq, nodeFactory){
 	
 	return nodesToStart;
 }
-
+		
 function getADSRFeed(sinkNode){
 	// check if sinkNode has an ADSR envelope
 	let feedsFrom = sinkNode.feedsFrom;
@@ -106,294 +98,6 @@ function getADSRFeed(sinkNode){
 }
 
 
-// import preset 
-function importInstrumentPreset(){
-	let input = document.getElementById('importInstrumentPresetInput');
-	input.addEventListener('change', processInstrumentPreset, false);
-	input.click();
-}
-
-function processInstrumentPreset(e){
-	let reader = new FileReader();
-	let file = e.target.files[0];
-	
-	//when the image loads, put it on the canvas.
-	reader.onload = (function(theFile){
-		return function(e){
-			// parse JSON using JSON.parse 
-			let data = JSON.parse(e.target.result);
-			let presetName = data['presetName'];
-			
-			// TODO: finish
-		}
-	})(file);
-
-	//read the file as a URL
-	reader.readAsText(file);
-}
-
-
-
-function exportPreset(nodeFactory){
-	let fileName = prompt("enter filename");
-	if(fileName === null || fileName === ""){
-		return;
-	}
-	
-	let objToExport = {};
-	let currNodeStore = nodeFactory.nodeStore;
-	let currNodeStoreKeys = Object.keys(currNodeStore);
-	currNodeStoreKeys.forEach((node) => {
-		let currNode = currNodeStore[node];
-		
-		let nodeProps = {};
-		nodeProps.id = currNode.node.id;
-		nodeProps.feedsFrom = currNode.feedsFrom;
-		nodeProps.feedsInto = currNode.feedsInto;
-		
-		let params = Object.keys(currNode.node.__proto__);
-		if(params.length === 0){
-			// i.e. for ADSREnvelope, which is just a regular object
-			params = Object.keys(currNode.node);
-		}
-		
-		let nodeParams = {};
-		params.forEach((param) => {
-			if(typeof(currNode.node[param]) === "object" && "value" in currNode.node[param]){
-				// should just test value type instead? i.e. number vs string? if num, use value property?
-				nodeParams[param] = currNode.node[param].value;
-			}else if(currNode.node[param].constructor.name === "AudioBuffer"){
-				// handle audio buffers specially
-				let buffer = currNode.node[param];
-				let bufferProps = {};
-				for(var prop in buffer){
-					if(typeof(buffer[prop]) !== "function"){
-						bufferProps[prop] = buffer[prop];
-					}
-					// but make sure to add buffer data! assuming 1 channel here
-					bufferProps['channelData'] = buffer.getChannelData(0); 
-				}
-				nodeParams[param] = bufferProps;
-			}else{
-				// single value for this param 
-				nodeParams[param] = currNode.node[param];
-			}
-		});
-		nodeProps.node = nodeParams;
-		
-		objToExport[node] = nodeProps;
-	});
-	
-	//console.log(objToExport);
-	let theData = {};
-	theData["name"] = fileName;
-	theData["data"] = objToExport;
-	
-	let blob = new Blob([JSON.stringify(theData, null, 2)], {type: "application/json"});
-	//make a url for that blob
-	let url = URL.createObjectURL(blob);
-	
-	let link = document.createElement('a');
-	link.href = url; //link the a element to the blob's url
-	link.download = fileName + ".json";
-	
-	//then simulate a click to the blob url to initiate download
-	link.click();
-}
-
-
-
-function importInstrumentPreset(){
-	let input = document.getElementById('importInstrumentPresetInput');
-	input.addEventListener('change', processInstrumentPreset, false);
-	input.click();
-}
-
-function processInstrumentPreset(e){
-	let reader = new FileReader();
-	let file = e.target.files[0];
-	
-	//when the image loads, put it on the canvas.
-	reader.onload = (function(theFile){
-		return function(e){
-			let importedPreset = JSON.parse(e.target.result);
-		}
-	})(file);
-
-	//read the file as a URL
-	reader.readAsText(file);
-}
-
-function drawLineBetween(htmlElement1, htmlElement2, dash=false){
-	
-	// instead, we should create an individual svg per line
-	let svg = document.getElementById("svgCanvas");
-	
-	if(!svg){
-		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-		svg.style.position = "absolute";
-		svg.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
-		svg.style.zIndex = 0;
-		svg.style.height = "1000px"; // calculate these after you calculate the line dimensions?
-		svg.style.width = "1000px";	// calculate these after you calculate the line dimensions?
-		document.getElementById('nodeArea').appendChild(svg);
-	}
-	
-	let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-	line.classList.add('line');
-	line.setAttribute('stroke', '#000');
-	line.setAttribute('stroke-width', '1px');
-	
-	if(dash){
-		// for dotted lines
-		line.setAttribute('stroke-dasharray', 10); // is this number ok?
-	}
-	
-	let element1x = htmlElement1.offsetLeft + document.body.scrollLeft + ((htmlElement1.offsetWidth)/2);
-	let element1y = htmlElement1.offsetTop + document.body.scrollTop + ((htmlElement1.offsetHeight)/2);
-	let element2x = htmlElement2.offsetLeft + document.body.scrollLeft + ((htmlElement2.offsetWidth)/2);
-	let element2y = htmlElement2.offsetTop + document.body.scrollTop + ((htmlElement2.offsetHeight)/2);
-	
-	line.setAttribute('x1', element1x);
-	line.setAttribute('y1', element1y);
-	line.setAttribute('x2', element2x);
-	line.setAttribute('y2', element2y);
-	
-	let maxWidth = Math.max(element1x, element2x) + 200;
-	let maxHeight = Math.max(element1y, element2y) + 200;
-	svg.style.height = parseInt(svg.style.height) < maxHeight ? (maxHeight + "px") : svg.style.height;
-	svg.style.width = parseInt(svg.style.width) < maxWidth ? (maxWidth + "px") : svg.style.width;
-	
-	svg.appendChild(line);
-}
-
-function showParameterEditWindow(nodeInfo, valueRanges){
-	let editWindow = document.getElementById("editNode");
-	while(editWindow.firstChild){
-		editWindow.removeChild(editWindow.firstChild);
-	}
-	let title = document.createElement("h3");
-	title.textContent = nodeInfo.node.id;
-	editWindow.appendChild(title);
-	//console.log(nodeInfo);
-	
-	let node = nodeInfo.node;
-	let customizableProperties = Object.keys(nodeInfo.node.__proto__);
-
-	if(customizableProperties.length === 0){
-		// i.e. for adsr envelope 
-		customizableProperties = Object.keys(nodeInfo.node).filter((prop) => typeof(nodeInfo.node[prop]) === "number");
-	}
-	//console.log(node);
-	customizableProperties.forEach((prop) => {
-		let property = document.createElement('p');
-		let text = prop;
-		let isNumValue = false;
-		if(node[prop].value !== undefined){
-			text += ".value";
-			isNumValue = true;
-		}else if(typeof(node[prop]) === "number"){
-			isNumValue = true;
-		}
-		
-		property.textContent = text;
-
-		if(isNumValue){
-			editWindow.appendChild(property);
-			// what kind of param is it 
-			// probably should refactor this. instead, make sure each NODE INSTANCE has some new field called 'nodeType' that we can use?
-			let props = valueRanges[node.constructor.name] || valueRanges[node.type];
-			props = props[prop];
-			
-			let slider = document.createElement('input');
-			slider.id = text;
-			slider.setAttribute('type', 'range');
-			slider.setAttribute('max', props ? props['max'] : 0.5);
-			slider.setAttribute('min', props ? props['min'] : 0.0);
-			slider.setAttribute('step', props ? props['step'] : 0.01);
-			
-			// also allow value input via text edit box 
-			let editBox = document.createElement('input');
-			editBox.id = text + '-edit';
-			editBox.setAttribute('size', 6);
-			editBox.setAttribute('type', 'text');
-			
-			if(node[prop].value){
-				slider.setAttribute('value', node[prop].value);
-			}else if(typeof(node[prop]) === "number"){
-				// relevant to the ADSR envelope
-				slider.setAttribute('value', node[prop]);
-			}else{
-				slider.setAttribute('value', props['default']);
-			}
-			
-			editBox.value = slider.getAttribute('value');
-			editBox.style.fontFamily = "monospace";
-			editBox.addEventListener('input', (evt) => {
-				// evaluate the new value. 
-				// if it's a valid value, update the param it belongs to.
-				let inputtedValue = parseFloat(evt.target.value);
-				if(inputtedValue >= parseFloat(slider.getAttribute('min')) &&
-					inputtedValue <= parseFloat(slider.getAttribute('max'))){
-						slider.setAttribute('value', inputtedValue);
-						if(node[prop].value !== undefined){
-							node[prop].value = inputtedValue;
-						}else{
-							node[prop] = inputtedValue;
-						}
-				}				
-			});
-			
-			slider.addEventListener('input', function(evt){
-				let newVal = parseFloat(evt.target.value);
-				editBox.value = newVal;
-				
-				// update node
-				// probably should refactor (shouldn't have to check value prop?)
-				if(node[prop].value !== undefined){
-					node[prop].value = newVal;
-				}else{
-					node[prop] = newVal;
-				}
-			});
-			
-			editWindow.appendChild(slider);
-			editWindow.appendChild(editBox);
-			editWindow.appendChild(document.createElement('br'));
-			editWindow.appendChild(document.createElement('br'));
-			
-		}else{
-			if(prop === "type"){
-				editWindow.appendChild(property);
-				// dropdown box for type
-				let dropdown = document.createElement('select');
-				dropdown.id = text + "Type";
-				let options = [];
-				if(node.constructor.name.indexOf("Oscillator") >= 0){
-					// use waveType
-					options = valueRanges["waveType"];
-				}else{
-					// use filterType
-					options = valueRanges["filterType"];
-				}
-				options.forEach((opt) => {
-					let option = document.createElement('option');
-					option.textContent = opt;
-					dropdown.appendChild(option);
-				});
-				dropdown.addEventListener('change', (evt) => {
-					let val = dropdown.options[dropdown.selectedIndex].value;
-					nodeInfo.node[prop] = val;
-				});
-				dropdown.value = node[prop];
-				editWindow.appendChild(dropdown);
-			}
-		}
-	});
-		
-}
-
-
 class ADSREnvelope {
 	
 	constructor(){
@@ -404,19 +108,26 @@ class ADSREnvelope {
 		this.sustainLevel = 0;
 	}
 	
-	applyADSR(targetNodeParam, time){
+	applyADSR(targetNodeParam, start){
 		// targetNodeParam might be the gain property of a gain node, or a filter node for example
 		// the targetNode just needs to have fields that make sense to be manipulated with ADSR
 		// i.e. pass in gain.gain as targetNodeParam
 		// https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
-		//let targetNodeParam = targetNode[param];
-		let baseParamVal = targetNodeParam.value; // i.e. gain.gain.value
 		
-		targetNodeParam.linearRampToValueAtTime(0.0, time);
-		targetNodeParam.linearRampToValueAtTime(baseParamVal, time + this.attack);
-		targetNodeParam.linearRampToValueAtTime(baseParamVal * this.sustainLevel, this.attack + this.decay);
-		targetNodeParam.linearRampToValueAtTime(baseParamVal * this.sustainLevel, this.attack + this.decay + this.sustain);
-		targetNodeParam.linearRampToValueAtTime(0.0, this.attack + this.decay + this.sustain + this.release);
+		// only assuming node params that are objects (and have a value field)
+		let baseParamVal = targetNodeParam.baseValue; // i.e. gain.gain.value. this value will be the max value that the ADSR envelope will cover (the peak of the amplitude)
+
+		// TODO: this needs to be looked at more closely. what does a value of 0 mean?
+		// sustainLevel should be the level that the ADSR drops off to after hitting the peak, which is baseParamVal
+		let sustainLevel = this.sustainLevel === 0 ? 1 : this.sustainLevel;
+		targetNodeParam.cancelAndHoldAtTime(start);
+		targetNodeParam.linearRampToValueAtTime(0.0, start);
+		targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack);
+		targetNodeParam.linearRampToValueAtTime(baseParamVal * sustainLevel, start + this.attack + this.decay);
+		targetNodeParam.linearRampToValueAtTime(baseParamVal * sustainLevel, start + this.attack + this.decay + this.sustain);
+		
+		// if note is being held, don't do this.
+		//targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack + this.decay + this.sustain + this.release);
 		return targetNodeParam;
 	}
 }
@@ -559,6 +270,14 @@ class NodeFactory extends AudioContext {
 		}
 	} // end constructor
 	
+	getGainNodes(){
+		return [...Object.keys(this.nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => this.nodeStore[gainId]);
+	}
+	
+	getOscNodes(){
+		return [...Object.keys(this.nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
+	}
+	
 	createAudioContextDestinationUI(){
 		let audioCtxDest = document.createElement('div');
 		audioCtxDest.id = this.destination.constructor.name;
@@ -628,6 +347,10 @@ class NodeFactory extends AudioContext {
 		// gain will alwaays need to attach to context destination
 		gainNode.connect(this.destination);
 		gainNode.gain.value = this.valueRanges.GainNode.gain.default;
+		
+		// use this property to remember the desired base volume value
+		gainNode.gain.baseValue = this.valueRanges.GainNode.gain.default;
+		
 		gainNode.id = (gainNode.constructor.name + this.nodeCounts.addNode(gainNode));
 		return gainNode;
 	}
@@ -707,7 +430,6 @@ class NodeFactory extends AudioContext {
 	
 	_createNodeUIElement(node){
 		// add event listener to allow it to be hooked up to another node if possible
-		//let customizableProperties = Object.keys(node.__proto__);
 		let uiElement = document.createElement('div');
 		uiElement.style.backgroundColor = "#fff";
 		uiElement.style.zIndex = 10;
@@ -721,7 +443,6 @@ class NodeFactory extends AudioContext {
 		
 		let nodeInfo = this.nodeStore[node.id];
 		
-		// on MOUSEDOWN
 		uiElement.addEventListener("mousedown", (evt) => {
 
 			let offsetX = evt.clientX - uiElement.offsetLeft + window.pageXOffset;
@@ -955,7 +676,9 @@ class SoundMaker {
 
 
 
+////////////////////////// SET UP
 let soundMaker = new SoundMaker();
+
 document.getElementById('addWavNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("waveNode");
 });
@@ -987,25 +710,49 @@ soundMaker.nodeFactory.createAudioContextDestinationUI();
 let notes = [...document.getElementsByClassName("note")];
 let currPlayingNodes = [];
 
+// set up the keyboard for playing notes
 function setupKeyboard(keyboard, nodeFactory){
 	let audioContext = nodeFactory;
 	notes.forEach((note) => {
 		note.addEventListener('mouseup', (evt) => {
+			
+			let maxEndTime = audioContext.currentTime;
+			
+			// apply adsr release, if any
+			let gainNodes = nodeFactory.getGainNodes();
+			gainNodes.forEach((gain) => {
+				let gainNode = gain.node;
+				let adsr = getADSRFeed(gain);
+				if(adsr){
+					let envelope = nodeFactory.nodeStore[adsr].node;
+					gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
+					maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
+					
+					// also reset gain value back to whatever it's currently set at
+					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
+				}else{
+					// slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
+					// wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
+					// maybe we should fix gain stuff on mousedown instead?
+					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
+				}
+			});
+
 			currPlayingNodes.forEach((osc) => {
-				osc.stop(audioContext.currentTime);
+				osc.stop(maxEndTime);
 			});
 		});
 		
 		note.addEventListener('mousedown', (evt) => {
-			audioContext.resume().then(() => {
-				//processNote(event.toElement.innerHTML, audioContext, currPreset);
-				let noteFreq = NOTE_FREQ[note.textContent];
-				//console.log(noteFreq);
-				currPlayingNodes = processNote(noteFreq, nodeFactory);
-				currPlayingNodes.forEach((osc) => {
-					osc.start(0);
+			if(evt.buttons === 1){
+				audioContext.resume().then(() => {
+					let noteFreq = NOTE_FREQ[note.textContent];
+					currPlayingNodes = processNote(noteFreq, nodeFactory);
+					currPlayingNodes.forEach((osc) => {
+						osc.start(0);
+					});
 				});
-			});
+			}
 		});
 	});
 }

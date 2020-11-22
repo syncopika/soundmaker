@@ -16,3 +16,4 @@ https://blog.chrislowis.co.uk/2013/06/17/synthesis-web-audio-api-envelopes.html
 https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-envelope-generator/
 https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
 https://theproaudiofiles.com/synthesis-101-envelope-parameters-uses/
+https://blog.landr.com/adsr-envelopes-infographic/

@@ -2,7 +2,15 @@
 - BUG: the connection between a biquadfilter and a gain node doesn't seem to get reflected in the exported json. i.e. for the 
 biquadfilter you get an empty "feedsInto" list when it should have the gain node. try osc -> biquad -> gain.
 
-- instead of adding the oscillator reference to the nodeStore, just add a dict of props. actually, do that for all nodes.
+- import preset
+    - clear out any existing nodes (even gain nodes?)
+
+
+- show the ADSR curve
+- better keyboard + mini piano roll maybe?
+- color-coding for ADSR envelopes depending on target property (i.e. if targeting gain, the connector could be blue. if targeting
+  frequency, the connector could be green?)
+- be able to close parameter box after clicking on a node
 
 
 // other random notes:
