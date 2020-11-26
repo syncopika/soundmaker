@@ -5,6 +5,15 @@
 <head>
 	<title> web audio api custom sounds </title>
 	<style>
+	
+		body {
+			font-family: Tahoma, sans-serif;
+		}
+		
+		h1 {
+			text-align: center;
+		}
+		
 		td {
 			border: #000 solid 1px;
 			font-size: 50px;
@@ -18,10 +27,6 @@
 		.preset {
 			border-left: 1px solid #000;
 			padding-left: 1%;
-		}
-		
-		#editNode {
-			display: none;
 		}
 		
 		#nodeArea {
@@ -40,24 +45,25 @@
 		}
 		
 		#editNode {
-			width: 15%;
+			display: none;
+			width: 100%;
 			height: 100%;
-			border: 1px solid #000;
+			/*border: 1px solid #000;*/
 			text-align: center;
 		}
-		
 		
 	</style>
 </head>
 
 <body>
-	<h3><b> disclaimer: still in a highly experimental/prototype phase. thanks! </b></h3>
+	<h1> soundmaker </h1>
+	<h3><b> disclaimer: still in an experimental/prototype phase. thanks! </b></h3>
 	<p> make sounds - click on a rectangle to play a note after hooking up an oscillator to a gain node.</p>
 	<p> when connecting nodes, if you want to cancel/abort creating a connection, just right-click on any node. </p>
 	<p> double-click a node to edit its parameters. </p>
 	<p> currently the ADSR envelope can only be used for gain nodes. </p>
-	<br />
 	<p><b> to use this preset, download it and import it into my piano roll app <a href='https://syncopika.github.io/piano_roll_browser/'>here</a> (please note this feature is still experimental!)</b></p>
+	<br />
 	<div id='keyboard'>
 		<table id='keys'>
 			<tr>
@@ -98,6 +104,11 @@
 			download preset
 		</button>
 		
+		<button id='import'>
+			import preset
+		</button>
+		<input type='file' id='importInstrumentPresetInput' style='display: none'></input>
+		
 	</div>
 	
 	<hr />
@@ -113,4 +124,6 @@
 </html>
 
 <script src='utils.js'></script>
+<script src='ADSREnvelope.js'></script>
+<script src='NodeFactory.js'></script>
 <script src='soundmaker.js'></script>
