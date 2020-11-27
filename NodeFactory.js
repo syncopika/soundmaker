@@ -166,6 +166,15 @@ class NodeFactory extends AudioContext {
 		document.getElementById("nodeArea").appendChild(audioCtxDest);
 	}
 	
+	// delete all nodes
+	reset(){
+		for(let nodeId in this.nodeStore){
+			if(nodeId !== "AudioDestinationNode"){
+				this._deleteNode(this.nodeStore[nodeId].node);
+			}
+		}
+	}
+	
 	_addBaseValueProp(node){
 		for(let property in node){
 			if(node[property] && node[property].value){

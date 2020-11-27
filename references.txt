@@ -17,3 +17,6 @@ https://www.keithmcmillen.com/blog/making-music-in-the-browser-web-audio-midi-en
 https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
 https://theproaudiofiles.com/synthesis-101-envelope-parameters-uses/
 https://blog.landr.com/adsr-envelopes-infographic/
+
+https://stackoverflow.com/questions/17786618/how-to-use-z-index-in-svg-elements -> order of svg elements matters!
+https://stackoverflow.com/questions/11701461/attach-events-to-svg-paths -> fill can't be none

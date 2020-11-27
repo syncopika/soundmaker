@@ -225,12 +225,59 @@ function processInstrumentPreset(nodeFactory){
 			
 			reader.onload = (function(theFile){
 				return function(e){
-					let data = JSON.parse(e.target.result);
+					let data = JSON.parse(e.target.result)['data'];
 					let presetName = data['presetName'];
 					
-					// TODO: finish
-					console.log(data);
-					console.log(nf);
+					// clear out current nodes
+					nodeFactory.reset();
+					
+					// add new nodes
+					for(let nodeId in data){
+						if(nodeId.indexOf("Gain") > -1){
+							// gain node
+							nodeFactory.addNewNode("gainNode");
+						}else if(nodeId.indexOf("Oscillator") > -1){
+							// oscillator node
+							nodeFactory.addNewNode("waveNode");
+						}else if(nodeId.indexOf("ADSR") > -1){
+							// ADSR envelope
+							nodeFactory.addNewNode("ADSREnvelope");
+						}else if(nodeId.indexOf("AudioBuffer") > -1){
+							// audio buffer node
+							nodeFactory.addNewNode("noiseNode");
+						}else if(nodeId.indexOf("BiquadFilter") > -1){
+							// biquad filter node
+							nodeFactory.addNewNode("BiqudFilterNode");
+						}
+						
+						if(nodeId !== "AudioDestinationNode"){
+							let node = nodeFactory.nodeStore[nodeId];
+							node.feedsInto = data[nodeId].feedsInto;
+							node.feedsFrom = data[nodeId].feedsFrom;
+							
+							// update params based on saved values
+							let params = data[nodeId].node;
+							for(let param in params){
+								if(node.node[param].value !== undefined){
+									node.node[param].value = params[param];
+									node.node[param].baseValue = params[param];
+								}else{
+									node.node[param] = params[param];
+								}
+							}
+							
+							// connect nodes in UI with svg lines
+							node.feedsInto.forEach((sinkId) => {
+								source = document.getElementById(nodeId);
+								sink = document.getElementById(sinkId);
+								if(nodeId.indexOf("ADSR") > -1){
+									drawLineBetween(source, sink, dash=true);
+								}else{
+									drawLineBetween(source, sink, dash=false);
+								}
+							});
+						}
+					}
 				}
 			})(file);
 
@@ -289,19 +336,14 @@ function exportPreset(nodeFactory){
 		objToExport[node] = nodeProps;
 	});
 	
-	//console.log(objToExport);
 	let theData = {};
 	theData["name"] = fileName;
 	theData["data"] = objToExport;
 	
 	let blob = new Blob([JSON.stringify(theData, null, 2)], {type: "application/json"});
-	//make a url for that blob
 	let url = URL.createObjectURL(blob);
-	
 	let link = document.createElement('a');
-	link.href = url; //link the a element to the blob's url
+	link.href = url;
 	link.download = fileName + ".json";
-	
-	//then simulate a click to the blob url to initiate download
 	link.click();
 }
