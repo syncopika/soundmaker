@@ -2,25 +2,16 @@
 - BUG: the connection between a biquadfilter and a gain node doesn't seem to get reflected in the exported json. i.e. for the 
 biquadfilter you get an empty "feedsInto" list when it should have the gain node. try osc -> biquad -> gain.
 
-- import preset
-    - clear out any existing nodes (even gain nodes?)
-
-
+- make the audio buffer node actually useful? more customizable (i.e. samples)
 - show the ADSR curve
-- better keyboard + mini piano roll maybe?
 - color-coding for ADSR envelopes depending on target property (i.e. if targeting gain, the connector could be blue. if targeting
   frequency, the connector could be green?)
-- be able to close parameter box after clicking on a node
-
 
 // other random notes:
 ADSREnvelope {attack: 0.54, sustain: 0, decay: 0.53, release: 0, sustainLevel: 0, …
 
 - when refactoring, keep these things in mind?:
-	- split up the files. i.e. ADSREnvelope class should get its own file. you'll need that applyADSR code in the piano roll app too, unless you can actually define functions in json?
-	- the UI modification code (i.e. drawing the svg lines, node elements) maybe could be its own class? something like UIModifier or UIEditor.
+     the UI modification code (i.e. drawing the svg lines, node elements) maybe could be its own class? something like UIModifier or UIEditor.
 	
 - there should be a distinction between connecting nodes and connecting to audio params. use a dotted line for params? also,
   arrows for the lines would be helpful.
-
-- an actual keyboard image for note playback would be nice.

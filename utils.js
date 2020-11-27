@@ -257,27 +257,50 @@ function processInstrumentPreset(nodeFactory){
 							
 							// update params based on saved values
 							let params = data[nodeId].node;
-							for(let param in params){
-								if(node.node[param].value !== undefined){
-									node.node[param].value = params[param];
-									node.node[param].baseValue = params[param];
-								}else{
-									node.node[param] = params[param];
+							
+							if("buffer" in params){
+								// need to create a new audiobuffersource node instance
+								if(params["buffer"].channelData){
+									// create a new audiobuffer object that will be added to the source node instance
+									let bufferData = new Float32Array([...Object.values(params["buffer"].channelData)]); 
+									delete params["buffer"]['duration']; // duration param not supported for constructor apparently
+									
+									let buffer = new AudioBuffer(params["buffer"]);
+									buffer.copyToChannel(bufferData, 0); // only one channel. does this need to be changed?
+									params["buffer"] = buffer;
+								}
+								
+								let newAudioBuffSource = new AudioBufferSourceNode(nodeFactory, params);
+								newAudioBuffSource.loop = true;
+								newAudioBuffSource.id = nodeId;
+								node.node = newAudioBuffSource;
+							}else{
+								for(let param in params){
+									if(node.node[param].value !== undefined){
+										node.node[param].value = params[param];
+										node.node[param].baseValue = params[param];
+									}else if(param in node.node){
+										node.node[param] = params[param];
+									}
 								}
 							}
-							
-							// connect nodes in UI with svg lines
-							node.feedsInto.forEach((sinkId) => {
-								source = document.getElementById(nodeId);
-								sink = document.getElementById(sinkId);
-								if(nodeId.indexOf("ADSR") > -1){
-									drawLineBetween(source, sink, dash=true);
-								}else{
-									drawLineBetween(source, sink, dash=false);
-								}
-							});
 						}
 					}
+					
+					// connect nodes in UI with svg lines
+					for(let nodeId in data){
+						let node = nodeFactory.nodeStore[nodeId];
+						node.feedsInto.forEach((sinkId) => {
+							source = document.getElementById(nodeId);
+							sink = document.getElementById(sinkId);
+							if(nodeId.indexOf("ADSR") > -1){
+								drawLineBetween(source, sink, dash=true);
+							}else{
+								drawLineBetween(source, sink, dash=false);
+							}
+						});
+					}
+
 				}
 			})(file);
 
