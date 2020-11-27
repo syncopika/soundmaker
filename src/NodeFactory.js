@@ -1,137 +1,3 @@
-const NOTE_FREQ = {
-	"G": 783.99,
-	"F": 698.46,
-	"E": 659.25,
-	"D": 587.33,
-	"C": 523.25,
-	"B": 493.88,
-	"A": 440.00,
-};
-
-function processNote(noteFreq, nodeFactory){
-	// this is used to create and use new nodes each time a note needs to be played
-	
-	let nodeStore = nodeFactory.nodeStore;
-
-	// probably should look at not just osc nodes but those with 0 input.
-	// i.e. OscillatorNodes, AudioBufferSourceNodes
-	let oscNodes = nodeFactory.getOscNodes();
-	
-	let nodesToStart = [];
-	oscNodes.forEach((osc) => {
-		
-		// create a new osc node from the template props
-		let oscTemplateNode = nodeStore[osc].node;
-		let templateProps = {};
-		
-		Object.keys(oscTemplateNode.__proto__).forEach((propName) => {
-			let prop = oscTemplateNode[propName];
-			templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
-			
-			if(propName === "frequency"){
-				templateProps[propName] = noteFreq;
-			}
-		});
-		
-		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory, templateProps);
-		nodesToStart.push(newOsc);
-		
-		// need to go down all the way to each node and make connections
-		// gain nodes don't need to be touched as they're already attached to the context dest by default
-		let connections = nodeStore[osc].feedsInto;
-		connections.forEach((conn) => {
-			// connect the new osc node to this connection 
-			let sinkNode = nodeStore[conn].node;
-			
-			// make connection
-			newOsc.connect(sinkNode);
-			
-			// if source is a gain node, no need to go further
-			if(sinkNode.id.indexOf("Gain") < 0){
-				let stack = nodeStore[sinkNode.id]["feedsInto"];
-				let newSource = sinkNode;
-				
-				while(stack.length > 0){
-					let next = stack.pop();
-					let currSink = nodeStore[next].node;
-					console.log("connecting: " + newSource.constructor.name + " to: " + currSink.constructor.name);
-					
-					newSource.connect(currSink);
-					newSource = currSink;
-					nextConnections = nodeStore[next]["feedsInto"].filter((name) => name.indexOf("Destination") < 0);
-					stack = stack.concat(nextConnections);
-				}
-			}
-		});
-	});
-	
-	let time = nodeFactory.currentTime;
-	let gainNodes = nodeFactory.getGainNodes();
-
-	gainNodes.forEach((gain) => {
-		// we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
-		// maybe use dotted lines?
-		let gainNode = gain.node;
-		let adsr = getADSRFeed(gain);
-		if(adsr){
-			// if an adsr envelope feeds into this gain node, run the adsr function on the gain
-			let envelope = nodeStore[adsr].node;
-			envelope.applyADSR(gainNode.gain, time);
-		}else{
-			gainNode.gain.setValueAtTime(gainNode.gain.value, time);
-		}
-	});
-	
-	return nodesToStart;
-}
-		
-function getADSRFeed(sinkNode){
-	// check if sinkNode has an ADSR envelope
-	let feedsFrom = sinkNode.feedsFrom;
-	for(let i = 0; i < feedsFrom.length; i++){
-		let source = feedsFrom[i];
-		if(source.indexOf("ADSR") >= 0){
-			return source; // return name of ADSR envelope
-		}
-	};
-	return null;
-}
-
-
-class ADSREnvelope {
-	
-	constructor(){
-		this.attack = 0;
-		this.sustain = 0;
-		this.decay = 0;
-		this.release = 0;
-		this.sustainLevel = 0;
-	}
-	
-	applyADSR(targetNodeParam, start){
-		// targetNodeParam might be the gain property of a gain node, or a filter node for example
-		// the targetNode just needs to have fields that make sense to be manipulated with ADSR
-		// i.e. pass in gain.gain as targetNodeParam
-		// https://www.redblobgames.com/x/1618-webaudio/#orgeb1ffeb
-		
-		// only assuming node params that are objects (and have a value field)
-		let baseParamVal = targetNodeParam.baseValue; // i.e. gain.gain.value. this value will be the max value that the ADSR envelope will cover (the peak of the amplitude)
-
-		// TODO: this needs to be looked at more closely. what does a value of 0 mean?
-		// sustainLevel should be the level that the ADSR drops off to after hitting the peak, which is baseParamVal
-		let sustainLevel = this.sustainLevel === 0 ? 1 : this.sustainLevel;
-		targetNodeParam.cancelAndHoldAtTime(start);
-		targetNodeParam.linearRampToValueAtTime(0.0, start);
-		targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack);
-		targetNodeParam.linearRampToValueAtTime(baseParamVal * sustainLevel, start + this.attack + this.decay);
-		targetNodeParam.linearRampToValueAtTime(baseParamVal * sustainLevel, start + this.attack + this.decay + this.sustain);
-		
-		// if note is being held, don't do this.
-		//targetNodeParam.linearRampToValueAtTime(baseParamVal, start + this.attack + this.decay + this.sustain + this.release);
-		return targetNodeParam;
-	}
-}
-
 class NodeFactory extends AudioContext {
 	
 	constructor(){
@@ -139,6 +5,8 @@ class NodeFactory extends AudioContext {
 		
 		this.nodeColors = {}; // different background color for each kind of node element?
 		this.nodeStore = {};  // store refs for nodes
+		
+		// keep track of count of each unique node for id creation
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
 			// use nodeName if supplied
@@ -159,7 +27,7 @@ class NodeFactory extends AudioContext {
 				this[nodeType]--;
 				return this[nodeType];
 			}
-		}; // keep track of count of each unique node for id creation
+		};
 		
 		// for deciding the ranges and stuff for certain parameter values
 		this.valueRanges = {
@@ -289,12 +157,30 @@ class NodeFactory extends AudioContext {
 		audioCtxDest.style.textAlign = "center";
 		audioCtxDest.style.position = "absolute";
 		audioCtxDest.style.top = "20%";
-		audioCtxDest.style.left = "50%";
+		audioCtxDest.style.left = "45%";
 		audioCtxDest.style.zIndex = "10";
+		
 		let title = document.createElement("h2");
 		title.textContent = "audio context destination";
 		audioCtxDest.appendChild(title);
 		document.getElementById("nodeArea").appendChild(audioCtxDest);
+	}
+	
+	// delete all nodes
+	reset(){
+		for(let nodeId in this.nodeStore){
+			if(nodeId !== "AudioDestinationNode"){
+				this._deleteNode(this.nodeStore[nodeId].node);
+			}
+		}
+	}
+	
+	_addBaseValueProp(node){
+		for(let property in node){
+			if(node[property] && node[property].value){
+				node[property].baseValue = node[property].value;
+			}
+		}
 	}
 	
 	// store a node in this.nodeStore
@@ -315,14 +201,18 @@ class NodeFactory extends AudioContext {
 		// be created. but we can save the properties of the oscillator and reuse that data.
 		// so basically we create a dummy oscillator for the purposes of storing information (as a template)
 		let osc = this.createOscillator();
+		
 		// default params 
 		osc.frequency.value = 440; // A @ 440 Hz
 		osc.detune.value = 0;
 		osc.type = "sine";
 		osc.id = (osc.constructor.name + this.nodeCounts.addNode(osc));
+		
+		this._addBaseValueProp(osc);
 		return osc;
 	}
 	
+	// audio buffer source node
 	_createNoiseNode(){
 		// allow user to pass in the contents of the noise buffer as a list if they want to?
 		let noise = this.createBufferSource();
@@ -336,6 +226,8 @@ class NodeFactory extends AudioContext {
 			output[i] = Math.random() * 2 - 1;
 		}
 		
+		this._addBaseValueProp(noise);
+		
 		noise.buffer = buffer;
 		noise.loop = true;
 		noise.id = (noise.constructor.name + this.nodeCounts.addNode(noise));
@@ -344,28 +236,32 @@ class NodeFactory extends AudioContext {
 	
 	_createGainNode(){
 		let gainNode = this.createGain();
-		// gain will alwaays need to attach to context destination
+		
+		// gain will always need to attach to context destination
 		gainNode.connect(this.destination);
 		gainNode.gain.value = this.valueRanges.GainNode.gain.default;
 		
 		// use this property to remember the desired base volume value
-		gainNode.gain.baseValue = this.valueRanges.GainNode.gain.default;
+		this._addBaseValueProp(gainNode);
 		
-		gainNode.id = (gainNode.constructor.name + this.nodeCounts.addNode(gainNode));
+		gainNode.id = gainNode.constructor.name + this.nodeCounts.addNode(gainNode);
 		return gainNode;
 	}
 	
 	// create a biquadfilter node
 	_createBiquadFilterNode(){
 		let bqFilterNode = this.createBiquadFilter();
+		
 		bqFilterNode.frequency.value = 440;
 		bqFilterNode.detune.value = 0;
-		bqFilterNode.Q.value = 1;
 		bqFilterNode.gain.value = 0;
+		bqFilterNode.Q.value = 1;
 		bqFilterNode.type = "lowpass";
 		
+		this._addBaseValueProp(bqFilterNode);
+		
 		// need to add to nodeCounts
-		bqFilterNode.id = (bqFilterNode.constructor.name + this.nodeCounts.addNode(bqFilterNode));
+		bqFilterNode.id = bqFilterNode.constructor.name + this.nodeCounts.addNode(bqFilterNode);
 		return bqFilterNode;
 	}
 	
@@ -374,7 +270,7 @@ class NodeFactory extends AudioContext {
 	// for now we should keep this very simple! :)
 	_createADSREnvelopeNode(){
 		let envelope = new ADSREnvelope();
-		envelope.id = (envelope.constructor.name + this.nodeCounts.addNode(envelope));
+		envelope.id = envelope.constructor.name + this.nodeCounts.addNode(envelope);
 		return envelope;
 	}
 	
@@ -659,119 +555,3 @@ class NodeFactory extends AudioContext {
 	}
 	
 } // end NodeFactory
-
-// maybe move all the UI handling stuff to another class that will be comprised of the nodefactory class?
-class SoundMaker {
-	constructor(){
-		this.nodeFactory = new NodeFactory();
-		this.nodeFactory.suspend(); // need to suspend audio context (which a node factory is) initially
-		
-		// store the audio context's destination as a node
-		this.nodeFactory._storeNode(
-			this.nodeFactory.destination, 
-			this.nodeFactory.destination.constructor.name
-		);
-	}
-}
-
-
-
-////////////////////////// SET UP
-let soundMaker = new SoundMaker();
-
-document.getElementById('addWavNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("waveNode");
-});
-
-document.getElementById('addGainNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("gainNode");
-});
-
-document.getElementById('addNoiseNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("noiseNode");
-});
-
-document.getElementById('addFilterNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("biquadFilterNode");
-});
-
-document.getElementById('addADSRNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("ADSREnvelope");
-});
-
-document.getElementById('download').addEventListener('click', (e) => {
-	exportPreset(soundMaker.nodeFactory);
-});
-
-soundMaker.nodeFactory.createAudioContextDestinationUI();
-
-
-
-let notes = [...document.getElementsByClassName("note")];
-let currPlayingNodes = [];
-
-// set up the keyboard for playing notes
-function setupKeyboard(keyboard, nodeFactory){
-	let audioContext = nodeFactory;
-	notes.forEach((note) => {
-		note.addEventListener('mouseup', (evt) => {
-			
-			let maxEndTime = audioContext.currentTime;
-			
-			// apply adsr release, if any
-			let gainNodes = nodeFactory.getGainNodes();
-			gainNodes.forEach((gain) => {
-				let gainNode = gain.node;
-				let adsr = getADSRFeed(gain);
-				if(adsr){
-					let envelope = nodeFactory.nodeStore[adsr].node;
-					gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
-					maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
-					
-					// also reset gain value back to whatever it's currently set at
-					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
-				}else{
-					// slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
-					// wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
-					// maybe we should fix gain stuff on mousedown instead?
-					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
-				}
-			});
-
-			currPlayingNodes.forEach((osc) => {
-				osc.stop(maxEndTime);
-			});
-		});
-		
-		note.addEventListener('mousedown', (evt) => {
-			if(evt.buttons === 1){
-				audioContext.resume().then(() => {
-					let noteFreq = NOTE_FREQ[note.textContent];
-					currPlayingNodes = processNote(noteFreq, nodeFactory);
-					currPlayingNodes.forEach((osc) => {
-						osc.start(0);
-					});
-				});
-			}
-		});
-	});
-}
-setupKeyboard(notes, soundMaker.nodeFactory);
-
-
-
-
-
-
-///////// TESTS
-function Test1(){
-	let sm = new SoundMaker();
-	console.log(sm.nodeFactory !== undefined);
-	
-	let nf = sm.nodeFactory;
-	nf.addNewNode("waveNode", false); 
-	console.log(Object.keys(nf.nodeStore).length === 1);
-	console.log(Object.keys(nf.nodeStore)[0] === "OscillatorNode1");
-	console.log(nf.nodeCounts["OscillatorNode"] === 1);
-}
-//Test1();

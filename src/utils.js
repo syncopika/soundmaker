@@ -26,7 +26,7 @@ function drawLineBetween(htmlElement1, htmlElement2, dash=false){
 	
 	if(dash){
 		// for dotted lines
-		line.setAttribute('stroke-dasharray', 10); // is this number ok?
+		line.setAttribute('stroke-dasharray', 10);
 	}
 	
 	let element1x = htmlElement1.offsetLeft + document.body.scrollLeft + ((htmlElement1.offsetWidth)/2);
@@ -57,7 +57,6 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 	let title = document.createElement("h3");
 	title.textContent = nodeInfo.node.id;
 	editWindow.appendChild(title);
-	//console.log(nodeInfo);
 	
 	let node = nodeInfo.node;
 	let customizableProperties = Object.keys(nodeInfo.node.__proto__);
@@ -66,9 +65,16 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 		// i.e. for adsr envelope 
 		customizableProperties = Object.keys(nodeInfo.node).filter((prop) => typeof(nodeInfo.node[prop]) === "number");
 	}
-	//console.log(node);
+
 	customizableProperties.forEach((prop) => {
+		let propertyDiv = document.createElement('div');
+		propertyDiv.style.display = "inline-block";
+		propertyDiv.style.marginRight = "3%";
+		propertyDiv.style.marginLeft = "3%";
+		
 		let property = document.createElement('p');
+		propertyDiv.appendChild(property);
+		
 		let text = prop;
 		let isNumValue = false;
 		if(node[prop].value !== undefined){
@@ -78,10 +84,11 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			isNumValue = true;
 		}
 		
-		property.textContent = text;
+		property.textContent = text; // the name of the parameter to be edited
 
 		if(isNumValue){
-			editWindow.appendChild(property);
+			editWindow.appendChild(propertyDiv);
+			
 			// what kind of param is it 
 			// probably should refactor this. instead, make sure each NODE INSTANCE has some new field called 'nodeType' that we can use?
 			let props = valueRanges[node.constructor.name] || valueRanges[node.type];
@@ -140,7 +147,6 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 				editBox.value = newVal;
 				
 				// update node
-				// probably should refactor (shouldn't have to check value prop?)
 				if(node[prop].value !== undefined){
 					node[prop].value = newVal;
 					node[prop].baseValue = newVal;
@@ -149,17 +155,16 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 				}
 			});
 			
-			editWindow.appendChild(slider);
-			editWindow.appendChild(editBox);
-			editWindow.appendChild(document.createElement('br'));
-			editWindow.appendChild(document.createElement('br'));
-			
+			propertyDiv.appendChild(slider);
+			propertyDiv.appendChild(editBox);
 		}else{
 			if(prop === "type"){
-				editWindow.appendChild(property);
 				// dropdown box for type
+				editWindow.appendChild(propertyDiv);
+				
 				let dropdown = document.createElement('select');
 				dropdown.id = text + "Type";
+				
 				let options = [];
 				if(node.constructor.name.indexOf("Oscillator") >= 0){
 					// use waveType
@@ -178,18 +183,22 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 					nodeInfo.node[prop] = val;
 				});
 				dropdown.value = node[prop];
-				editWindow.appendChild(dropdown);
+				propertyDiv.appendChild(dropdown);
 			}
 		}
 	});
 	
 	// allow user to close param edit window
 	let hideWindow = document.createElement('p');
+	hideWindow.style.margin = "0 auto";
+	hideWindow.style.marginTop = "2%";
+	hideWindow.style.width = "3%";
 	hideWindow.textContent = 'close';
 	hideWindow.style.color = "#ff0000";
 	hideWindow.addEventListener('click', (evt) => {
 		editWindow.style.display = "none";
 	});
+	
 	editWindow.appendChild(hideWindow);
 }
 
@@ -201,29 +210,103 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 ***/
 
 // import preset 
-function importInstrumentPreset(){
+function importPreset(nodeFactory){
 	let input = document.getElementById('importInstrumentPresetInput');
-	input.addEventListener('change', processInstrumentPreset, false);
+	input.addEventListener('change', importInstrumentPreset(nodeFactory), false);
 	input.click();
 }
 
-function processInstrumentPreset(e){
-	let reader = new FileReader();
-	let file = e.target.files[0];
+function processPresetImport(data, nodeFactory){
+	// clear out current nodes
+	nodeFactory.reset();
 	
-	//when the image loads, put it on the canvas.
-	reader.onload = (function(theFile){
-		return function(e){
-			// parse JSON using JSON.parse 
-			let data = JSON.parse(e.target.result);
-			let presetName = data['presetName'];
-			
-			// TODO: finish
+	// add new nodes
+	for(let nodeId in data){
+		if(nodeId.indexOf("Gain") > -1){
+			// gain node
+			nodeFactory.addNewNode("gainNode");
+		}else if(nodeId.indexOf("Oscillator") > -1){
+			// oscillator node
+			nodeFactory.addNewNode("waveNode");
+		}else if(nodeId.indexOf("ADSR") > -1){
+			// ADSR envelope
+			nodeFactory.addNewNode("ADSREnvelope");
+		}else if(nodeId.indexOf("AudioBuffer") > -1){
+			// audio buffer node
+			nodeFactory.addNewNode("noiseNode");
+		}else if(nodeId.indexOf("BiquadFilter") > -1){
+			// biquad filter node
+			nodeFactory.addNewNode("BiqudFilterNode");
 		}
-	})(file);
+		
+		if(nodeId !== "AudioDestinationNode"){
+			let node = nodeFactory.nodeStore[nodeId];
+			node.feedsInto = data[nodeId].feedsInto;
+			node.feedsFrom = data[nodeId].feedsFrom;
+			
+			// update params based on saved values
+			let params = data[nodeId].node;
+			
+			if("buffer" in params){
+				// need to create a new audiobuffersource node instance
+				if(params["buffer"].channelData){
+					// create a new audiobuffer object that will be added to the source node instance
+					let bufferData = new Float32Array([...Object.values(params["buffer"].channelData)]); 
+					delete params["buffer"]['duration']; // duration param not supported for constructor apparently
+					
+					let buffer = new AudioBuffer(params["buffer"]);
+					buffer.copyToChannel(bufferData, 0); // only one channel. does this need to be changed?
+					params["buffer"] = buffer;
+				}
+				
+				let newAudioBuffSource = new AudioBufferSourceNode(nodeFactory, params);
+				newAudioBuffSource.loop = true;
+				newAudioBuffSource.id = nodeId;
+				node.node = newAudioBuffSource;
+			}else{
+				for(let param in params){
+					if(node.node[param].value !== undefined){
+						node.node[param].value = params[param];
+						node.node[param].baseValue = params[param];
+					}else if(param in node.node){
+						node.node[param] = params[param];
+					}
+				}
+			}
+		}
+	}
+	
+	// connect nodes in UI with svg lines
+	for(let nodeId in data){
+		let node = nodeFactory.nodeStore[nodeId];
+		node.feedsInto.forEach((sinkId) => {
+			source = document.getElementById(nodeId);
+			sink = document.getElementById(sinkId);
+			if(nodeId.indexOf("ADSR") > -1){
+				drawLineBetween(source, sink, dash=true);
+			}else{
+				drawLineBetween(source, sink, dash=false);
+			}
+		});
+	}	
+}
 
-	//read the file as a URL
-	reader.readAsText(file);
+function importInstrumentPreset(nodeFactory){
+	return (function(nf){
+		return function(evt){
+			let reader = new FileReader();
+			let file = evt.target.files[0];
+			
+			reader.onload = (function(theFile){
+				return function(e){
+					let data = JSON.parse(e.target.result)['data'];
+					processPresetImport(data, nf);
+				}
+			})(file);
+
+			reader.readAsText(file);
+		}
+	})(nodeFactory);
 }
 
 function exportPreset(nodeFactory){
@@ -276,19 +359,23 @@ function exportPreset(nodeFactory){
 		objToExport[node] = nodeProps;
 	});
 	
-	//console.log(objToExport);
 	let theData = {};
 	theData["name"] = fileName;
 	theData["data"] = objToExport;
 	
 	let blob = new Blob([JSON.stringify(theData, null, 2)], {type: "application/json"});
-	//make a url for that blob
 	let url = URL.createObjectURL(blob);
-	
 	let link = document.createElement('a');
-	link.href = url; //link the a element to the blob's url
+	link.href = url;
 	link.download = fileName + ".json";
-	
-	//then simulate a click to the blob url to initiate download
 	link.click();
+}
+
+function loadDemoPreset(presetName, nodeFactory){
+	fetch("/demo-presets/" + presetName + ".json")
+		.then(response => response.json())
+		.then(data => {
+			let theData = data.data;
+			processPresetImport(theData, nodeFactory);
+		});
 }
