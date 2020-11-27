@@ -211,13 +211,87 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 
 // import preset 
 function importPreset(nodeFactory){
-	
 	let input = document.getElementById('importInstrumentPresetInput');
-	input.addEventListener('change', processInstrumentPreset(nodeFactory), false);
+	input.addEventListener('change', importInstrumentPreset(nodeFactory), false);
 	input.click();
 }
 
-function processInstrumentPreset(nodeFactory){
+function processPresetImport(data, nodeFactory){
+	// clear out current nodes
+	nodeFactory.reset();
+	
+	// add new nodes
+	for(let nodeId in data){
+		if(nodeId.indexOf("Gain") > -1){
+			// gain node
+			nodeFactory.addNewNode("gainNode");
+		}else if(nodeId.indexOf("Oscillator") > -1){
+			// oscillator node
+			nodeFactory.addNewNode("waveNode");
+		}else if(nodeId.indexOf("ADSR") > -1){
+			// ADSR envelope
+			nodeFactory.addNewNode("ADSREnvelope");
+		}else if(nodeId.indexOf("AudioBuffer") > -1){
+			// audio buffer node
+			nodeFactory.addNewNode("noiseNode");
+		}else if(nodeId.indexOf("BiquadFilter") > -1){
+			// biquad filter node
+			nodeFactory.addNewNode("BiqudFilterNode");
+		}
+		
+		if(nodeId !== "AudioDestinationNode"){
+			let node = nodeFactory.nodeStore[nodeId];
+			node.feedsInto = data[nodeId].feedsInto;
+			node.feedsFrom = data[nodeId].feedsFrom;
+			
+			// update params based on saved values
+			let params = data[nodeId].node;
+			
+			if("buffer" in params){
+				// need to create a new audiobuffersource node instance
+				if(params["buffer"].channelData){
+					// create a new audiobuffer object that will be added to the source node instance
+					let bufferData = new Float32Array([...Object.values(params["buffer"].channelData)]); 
+					delete params["buffer"]['duration']; // duration param not supported for constructor apparently
+					
+					let buffer = new AudioBuffer(params["buffer"]);
+					buffer.copyToChannel(bufferData, 0); // only one channel. does this need to be changed?
+					params["buffer"] = buffer;
+				}
+				
+				let newAudioBuffSource = new AudioBufferSourceNode(nodeFactory, params);
+				newAudioBuffSource.loop = true;
+				newAudioBuffSource.id = nodeId;
+				node.node = newAudioBuffSource;
+			}else{
+				for(let param in params){
+					if(node.node[param].value !== undefined){
+						node.node[param].value = params[param];
+						node.node[param].baseValue = params[param];
+					}else if(param in node.node){
+						node.node[param] = params[param];
+					}
+				}
+			}
+		}
+	}
+	
+	// connect nodes in UI with svg lines
+	for(let nodeId in data){
+		let node = nodeFactory.nodeStore[nodeId];
+		node.feedsInto.forEach((sinkId) => {
+			source = document.getElementById(nodeId);
+			sink = document.getElementById(sinkId);
+			if(nodeId.indexOf("ADSR") > -1){
+				drawLineBetween(source, sink, dash=true);
+			}else{
+				drawLineBetween(source, sink, dash=false);
+			}
+		});
+	}	
+}
+
+function importInstrumentPreset(nodeFactory){
 	return (function(nf){
 		return function(evt){
 			let reader = new FileReader();
@@ -226,81 +300,7 @@ function processInstrumentPreset(nodeFactory){
 			reader.onload = (function(theFile){
 				return function(e){
 					let data = JSON.parse(e.target.result)['data'];
-					let presetName = data['presetName'];
-					
-					// clear out current nodes
-					nodeFactory.reset();
-					
-					// add new nodes
-					for(let nodeId in data){
-						if(nodeId.indexOf("Gain") > -1){
-							// gain node
-							nodeFactory.addNewNode("gainNode");
-						}else if(nodeId.indexOf("Oscillator") > -1){
-							// oscillator node
-							nodeFactory.addNewNode("waveNode");
-						}else if(nodeId.indexOf("ADSR") > -1){
-							// ADSR envelope
-							nodeFactory.addNewNode("ADSREnvelope");
-						}else if(nodeId.indexOf("AudioBuffer") > -1){
-							// audio buffer node
-							nodeFactory.addNewNode("noiseNode");
-						}else if(nodeId.indexOf("BiquadFilter") > -1){
-							// biquad filter node
-							nodeFactory.addNewNode("BiqudFilterNode");
-						}
-						
-						if(nodeId !== "AudioDestinationNode"){
-							let node = nodeFactory.nodeStore[nodeId];
-							node.feedsInto = data[nodeId].feedsInto;
-							node.feedsFrom = data[nodeId].feedsFrom;
-							
-							// update params based on saved values
-							let params = data[nodeId].node;
-							
-							if("buffer" in params){
-								// need to create a new audiobuffersource node instance
-								if(params["buffer"].channelData){
-									// create a new audiobuffer object that will be added to the source node instance
-									let bufferData = new Float32Array([...Object.values(params["buffer"].channelData)]); 
-									delete params["buffer"]['duration']; // duration param not supported for constructor apparently
-									
-									let buffer = new AudioBuffer(params["buffer"]);
-									buffer.copyToChannel(bufferData, 0); // only one channel. does this need to be changed?
-									params["buffer"] = buffer;
-								}
-								
-								let newAudioBuffSource = new AudioBufferSourceNode(nodeFactory, params);
-								newAudioBuffSource.loop = true;
-								newAudioBuffSource.id = nodeId;
-								node.node = newAudioBuffSource;
-							}else{
-								for(let param in params){
-									if(node.node[param].value !== undefined){
-										node.node[param].value = params[param];
-										node.node[param].baseValue = params[param];
-									}else if(param in node.node){
-										node.node[param] = params[param];
-									}
-								}
-							}
-						}
-					}
-					
-					// connect nodes in UI with svg lines
-					for(let nodeId in data){
-						let node = nodeFactory.nodeStore[nodeId];
-						node.feedsInto.forEach((sinkId) => {
-							source = document.getElementById(nodeId);
-							sink = document.getElementById(sinkId);
-							if(nodeId.indexOf("ADSR") > -1){
-								drawLineBetween(source, sink, dash=true);
-							}else{
-								drawLineBetween(source, sink, dash=false);
-							}
-						});
-					}
-
+					processPresetImport(data, nf);
 				}
 			})(file);
 
@@ -369,4 +369,13 @@ function exportPreset(nodeFactory){
 	link.href = url;
 	link.download = fileName + ".json";
 	link.click();
+}
+
+function loadDemoPreset(presetName, nodeFactory){
+	fetch("/demo-presets/" + presetName + ".json")
+		.then(response => response.json())
+		.then(data => {
+			let theData = data.data;
+			processPresetImport(theData, nodeFactory);
+		});
 }

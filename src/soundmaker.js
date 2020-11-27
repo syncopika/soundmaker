@@ -246,6 +246,13 @@ document.getElementById('import').addEventListener('click', (e) => {
 	importPreset(soundMaker.nodeFactory);
 });
 
+document.getElementById('demos').addEventListener('change', (e) => {
+	let presetName = e.target.options[e.target.selectedIndex].value;
+	if(presetName !== ""){
+		loadDemoPreset(presetName, soundMaker.nodeFactory);
+	}
+});
+
 soundMaker.nodeFactory.createAudioContextDestinationUI();
 
 
