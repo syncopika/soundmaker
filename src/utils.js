@@ -372,7 +372,7 @@ function exportPreset(nodeFactory){
 }
 
 function loadDemoPreset(presetName, nodeFactory){
-	fetch("/demo-presets/" + presetName + ".json")
+	fetch("demo-presets/" + presetName + ".json")
 		.then(response => response.json())
 		.then(data => {
 			let theData = data.data;
