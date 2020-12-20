@@ -277,15 +277,31 @@ function processPresetImport(data, nodeFactory){
 	}
 	
 	// connect nodes in UI with svg lines
+	// also offset the nodes in the UI a bit so the user can see that they were all loaded
+	// otherwise they're stacked perfectly on each other and it looks like there's only a single node
 	for(let nodeId in data){
 		let node = nodeFactory.nodeStore[nodeId];
 		node.feedsInto.forEach((sinkId) => {
-			source = document.getElementById(nodeId);
-			sink = document.getElementById(sinkId);
-			if(nodeId.indexOf("ADSR") > -1){
-				drawLineBetween(source, sink, dash=true);
-			}else{
-				drawLineBetween(source, sink, dash=false);
+			let source = document.getElementById(nodeId);
+			
+			// offset source node UI slightly
+			let maxTop = parseInt(source.style.top) + 80;
+			let minTop = parseInt(source.style.top) - 80;
+			source.style.top = (Math.random() * (maxTop - minTop) + minTop) + "px";
+			
+			let maxLeft = parseInt(source.style.left) + 80;
+			let minLeft = parseInt(source.style.left) - 80;
+			source.style.left = (Math.random() * (maxLeft - minLeft) + minLeft) + "px";
+			
+			let sink = document.getElementById(sinkId);
+			
+			// make sure line doesn't exist already
+			if(!document.getElementById("svgCanvas:" + nodeId + ":" + sinkId)){
+				if(nodeId.indexOf("ADSR") > -1){
+					drawLineBetween(source, sink, dash=true);
+				}else{
+					drawLineBetween(source, sink, dash=false);
+				}
 			}
 		});
 	}	
