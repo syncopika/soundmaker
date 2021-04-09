@@ -247,9 +247,31 @@ document.getElementById('import').addEventListener('click', (e) => {
 });
 
 document.getElementById('demos').addEventListener('change', (e) => {
-	let presetName = e.target.options[e.target.selectedIndex].value;
+	const presetName = e.target.options[e.target.selectedIndex].value;
 	if(presetName !== ""){
 		loadDemoPreset(presetName, soundMaker.nodeFactory);
+	}
+});
+
+document.getElementById('toggleViz').addEventListener('click', (e) => {
+	//const style = window.getComputedStyle(e.target);
+	//console.log(style.getPropertyValue('border'));
+	const borderStyle = e.target.style.border;
+	if(!borderStyle || borderStyle === '3px solid rgb(0, 204, 0)'){
+		e.target.style.border = '3px solid rgb(204, 0, 0)';
+		e.target.textContent = 'off';
+		
+		// stop visualization
+		window.cancelAnimationFrame(doVisualization);
+		
+		// clear canvas
+		canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+	}else{
+		e.target.style.border = '3px solid rgb(0, 204, 0)';
+		e.target.textContent = 'on';
+		
+		// start visualization
+		doVisualization = requestAnimationFrame(runViz);
 	}
 });
 
