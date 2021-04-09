@@ -310,8 +310,49 @@ function setupKeyboard(keyboard, nodeFactory){
 setupKeyboard(notes, soundMaker.nodeFactory);
 
 
+// setup for audio visualization
+soundMaker.nodeFactory.analyserNode.fftSize = 2048;
+const bufferLen = soundMaker.nodeFactory.analyserNode.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLen);
 
+const canvas = document.getElementById('vizCanvas');
+const canvasCtx = canvas.getContext('2d');
+canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
+// https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+let doVisualization = requestAnimationFrame(runViz); // keep the request id around to be able to cancel if needed
+function runViz(){
+	const width = canvas.width;
+	const height = canvas.height;
+	
+	soundMaker.nodeFactory.analyserNode.getByteTimeDomainData(dataArray);
+	canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+	canvasCtx.fillRect(0, 0, width, height);
+	canvasCtx.lineWidth = 2;
+	canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+	canvasCtx.beginPath();
+	
+	const sliceWidth = width / bufferLen;
+	let startPos = 0;
+	
+	for(let i = 0; i < bufferLen; i++){
+		const dataVal = dataArray[i] / 128.0;
+		const toPos = (dataVal * height)/2;
+		
+		if(i === 0){
+			canvasCtx.moveTo(startPos, toPos);
+		}else{
+			canvasCtx.lineTo(startPos, toPos);
+		}
+		
+		startPos += sliceWidth;
+	}
+	
+	canvasCtx.lineTo(width, height/2);
+	canvasCtx.stroke();
+	
+	doVisualization = requestAnimationFrame(runViz);
+}
 
 
 ///////// TESTS
