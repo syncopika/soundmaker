@@ -125,7 +125,6 @@ class SoundMaker {
 
 function processNote(noteFreq, nodeFactory){
 	// this is used to create and use new nodes each time a note needs to be played
-	
 	let nodeStore = nodeFactory.nodeStore;
 
 	// probably should look at not just osc nodes but those with 0 input.
@@ -214,8 +213,8 @@ function getADSRFeed(sinkNode){
 
 
 ////////////////////////// SET UP
-let soundMaker = new SoundMaker();
-let notes = [...document.getElementsByClassName("note")];
+const soundMaker = new SoundMaker();
+const notes = [...document.getElementsByClassName("note")];
 let currPlayingNodes = [];
 
 document.getElementById('addWavNode').addEventListener('click', (e) => {
@@ -280,41 +279,44 @@ soundMaker.nodeFactory.createAudioContextDestinationUI();
 
 // set up the keyboard for playing notes
 function setupKeyboard(keyboard, nodeFactory){
-	let audioContext = nodeFactory;
-	notes.forEach((note) => {
-		note.addEventListener('mouseup', (evt) => {
-			
-			evt.target.style.stroke = "#000000";
-			evt.target.style.strokeWidth = "0.264583px";
-			
-			let maxEndTime = audioContext.currentTime;
-			
-			// apply adsr release, if any
-			let gainNodes = nodeFactory.getGainNodes();
-			gainNodes.forEach((gain) => {
-				let gainNode = gain.node;
-				let adsr = getADSRFeed(gain);
-				if(adsr){
-					let envelope = nodeFactory.nodeStore[adsr].node;
-					gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
-					maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
-					
-					// also reset gain value back to whatever it's currently set at
-					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
-				}else{
-					// slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
-					// wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
-					// maybe we should fix gain stuff on mousedown instead?
-					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
-				}
-			});
-
-			currPlayingNodes.forEach((osc) => {
-				osc.stop(maxEndTime);
-			});
-		});
+	const audioContext = nodeFactory;
+	
+	function stopPlay(evt){
+		evt.target.style.stroke = "#000000";
+		evt.target.style.strokeWidth = "0.264583px";
 		
+		let maxEndTime = audioContext.currentTime;
+		
+		// apply adsr release, if any
+		let gainNodes = nodeFactory.getGainNodes();
+		gainNodes.forEach((gain) => {
+			let gainNode = gain.node;
+			let adsr = getADSRFeed(gain);
+			if(adsr){
+				let envelope = nodeFactory.nodeStore[adsr].node;
+				gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
+				maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
+				
+				// also reset gain value back to whatever it's currently set at
+				gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
+			}else{
+				// slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
+				// wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
+				// maybe we should fix gain stuff on mousedown instead?
+				gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
+			}
+		});
+
+		currPlayingNodes.forEach((osc) => {
+			osc.stop(maxEndTime);
+		});
+	}
+	
+	notes.forEach((note) => {
+		note.addEventListener('mouseleave', stopPlay);
+		note.addEventListener('mouseup', stopPlay);
 		note.addEventListener('mousedown', (evt) => {
+			// highlight the key outline on the svg keyboard when pressed
 			if(evt.buttons === 1){
 				evt.target.style.stroke = "#2470FC";
 				evt.target.style.strokeWidth = "0.6px";
@@ -355,22 +357,21 @@ function runViz(){
 	canvasCtx.beginPath();
 	
 	const sliceWidth = width / bufferLen;
-	let startPos = 0;
+	let xPos = 0;
 	
 	for(let i = 0; i < bufferLen; i++){
-		const dataVal = dataArray[i] / 128.0;
-		const toPos = (dataVal * height)/2;
+		const dataVal = dataArray[i] / 128.0; // why 128?
+		const yPos = dataVal * (height/2);
 		
 		if(i === 0){
-			canvasCtx.moveTo(startPos, toPos);
+			canvasCtx.moveTo(xPos, yPos);
 		}else{
-			canvasCtx.lineTo(startPos, toPos);
+			canvasCtx.lineTo(xPos, yPos);
 		}
 		
-		startPos += sliceWidth;
+		xPos += sliceWidth;
 	}
 	
-	canvasCtx.lineTo(width, height/2);
 	canvasCtx.stroke();
 	
 	doVisualization = requestAnimationFrame(runViz);
