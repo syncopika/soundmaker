@@ -6,6 +6,10 @@ class NodeFactory extends AudioContext {
 		this.nodeColors = {}; // different background color for each kind of node element?
 		this.nodeStore = {};  // store refs for nodes
 		
+		// create an analyser node for visualizing the sounds
+		this.analyserNode = this.createAnalyser();
+		this.analyserNode.connect(this.destination);
+		
 		// keep track of count of each unique node for id creation
 		this.nodeCounts = {
 			// store this function and the node count of diff node types in same object
@@ -237,8 +241,8 @@ class NodeFactory extends AudioContext {
 	_createGainNode(){
 		let gainNode = this.createGain();
 		
-		// gain will always need to attach to context destination
-		gainNode.connect(this.destination);
+		// gain will always need to attach to analyser node (which is connected to destination)
+		gainNode.connect(this.analyserNode);
 		gainNode.gain.value = this.valueRanges.GainNode.gain.default;
 		
 		// use this property to remember the desired base volume value

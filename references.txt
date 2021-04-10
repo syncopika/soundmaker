@@ -1,4 +1,4 @@
-heavily inspired by: https://lcrespom.github.io/live-coding/
+inspired by: https://lcrespom.github.io/live-coding/
 
 https://javascript.info/mouse-drag-and-drop
 http://blog.greggant.com/posts/2018/10/16/drawing-svg-lines-between-multiple-dom-objects.html

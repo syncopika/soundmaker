@@ -125,7 +125,6 @@ class SoundMaker {
 
 function processNote(noteFreq, nodeFactory){
 	// this is used to create and use new nodes each time a note needs to be played
-	
 	let nodeStore = nodeFactory.nodeStore;
 
 	// probably should look at not just osc nodes but those with 0 input.
@@ -214,8 +213,8 @@ function getADSRFeed(sinkNode){
 
 
 ////////////////////////// SET UP
-let soundMaker = new SoundMaker();
-let notes = [...document.getElementsByClassName("note")];
+const soundMaker = new SoundMaker();
+const notes = [...document.getElementsByClassName("note")];
 let currPlayingNodes = [];
 
 document.getElementById('addWavNode').addEventListener('click', (e) => {
@@ -247,9 +246,31 @@ document.getElementById('import').addEventListener('click', (e) => {
 });
 
 document.getElementById('demos').addEventListener('change', (e) => {
-	let presetName = e.target.options[e.target.selectedIndex].value;
+	const presetName = e.target.options[e.target.selectedIndex].value;
 	if(presetName !== ""){
 		loadDemoPreset(presetName, soundMaker.nodeFactory);
+	}
+});
+
+document.getElementById('toggleViz').addEventListener('click', (e) => {
+	//const style = window.getComputedStyle(e.target);
+	//console.log(style.getPropertyValue('border'));
+	const borderStyle = e.target.style.border;
+	if(!borderStyle || borderStyle === '3px solid rgb(0, 204, 0)'){
+		e.target.style.border = '3px solid rgb(204, 0, 0)';
+		e.target.textContent = 'off';
+		
+		// stop visualization
+		window.cancelAnimationFrame(doVisualization);
+		
+		// clear canvas
+		canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+	}else{
+		e.target.style.border = '3px solid rgb(0, 204, 0)';
+		e.target.textContent = 'on';
+		
+		// start visualization
+		doVisualization = requestAnimationFrame(runViz);
 	}
 });
 
@@ -258,41 +279,44 @@ soundMaker.nodeFactory.createAudioContextDestinationUI();
 
 // set up the keyboard for playing notes
 function setupKeyboard(keyboard, nodeFactory){
-	let audioContext = nodeFactory;
-	notes.forEach((note) => {
-		note.addEventListener('mouseup', (evt) => {
-			
-			evt.target.style.stroke = "#000000";
-			evt.target.style.strokeWidth = "0.264583px";
-			
-			let maxEndTime = audioContext.currentTime;
-			
-			// apply adsr release, if any
-			let gainNodes = nodeFactory.getGainNodes();
-			gainNodes.forEach((gain) => {
-				let gainNode = gain.node;
-				let adsr = getADSRFeed(gain);
-				if(adsr){
-					let envelope = nodeFactory.nodeStore[adsr].node;
-					gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
-					maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
-					
-					// also reset gain value back to whatever it's currently set at
-					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
-				}else{
-					// slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
-					// wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
-					// maybe we should fix gain stuff on mousedown instead?
-					gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
-				}
-			});
-
-			currPlayingNodes.forEach((osc) => {
-				osc.stop(maxEndTime);
-			});
-		});
+	const audioContext = nodeFactory;
+	
+	function stopPlay(evt){
+		evt.target.style.stroke = "#000000";
+		evt.target.style.strokeWidth = "0.264583px";
 		
+		let maxEndTime = audioContext.currentTime;
+		
+		// apply adsr release, if any
+		let gainNodes = nodeFactory.getGainNodes();
+		gainNodes.forEach((gain) => {
+			let gainNode = gain.node;
+			let adsr = getADSRFeed(gain);
+			if(adsr){
+				let envelope = nodeFactory.nodeStore[adsr].node;
+				gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
+				maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
+				
+				// also reset gain value back to whatever it's currently set at
+				gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
+			}else{
+				// slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
+				// wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
+				// maybe we should fix gain stuff on mousedown instead?
+				gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
+			}
+		});
+
+		currPlayingNodes.forEach((osc) => {
+			osc.stop(maxEndTime);
+		});
+	}
+	
+	notes.forEach((note) => {
+		note.addEventListener('mouseleave', stopPlay);
+		note.addEventListener('mouseup', stopPlay);
 		note.addEventListener('mousedown', (evt) => {
+			// highlight the key outline on the svg keyboard when pressed
 			if(evt.buttons === 1){
 				evt.target.style.stroke = "#2470FC";
 				evt.target.style.strokeWidth = "0.6px";
@@ -310,8 +334,48 @@ function setupKeyboard(keyboard, nodeFactory){
 setupKeyboard(notes, soundMaker.nodeFactory);
 
 
+// setup for audio visualization
+soundMaker.nodeFactory.analyserNode.fftSize = 2048;
+const bufferLen = soundMaker.nodeFactory.analyserNode.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLen);
 
+const canvas = document.getElementById('vizCanvas');
+const canvasCtx = canvas.getContext('2d');
+canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 
+// https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+let doVisualization = requestAnimationFrame(runViz); // keep the request id around to be able to cancel if needed
+function runViz(){
+	const width = canvas.width;
+	const height = canvas.height;
+	
+	soundMaker.nodeFactory.analyserNode.getByteTimeDomainData(dataArray);
+	canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+	canvasCtx.fillRect(0, 0, width, height);
+	canvasCtx.lineWidth = 2;
+	canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+	canvasCtx.beginPath();
+	
+	const sliceWidth = width / bufferLen;
+	let xPos = 0;
+	
+	for(let i = 0; i < bufferLen; i++){
+		const dataVal = dataArray[i] / 128.0; // why 128?
+		const yPos = dataVal * (height/2);
+		
+		if(i === 0){
+			canvasCtx.moveTo(xPos, yPos);
+		}else{
+			canvasCtx.lineTo(xPos, yPos);
+		}
+		
+		xPos += sliceWidth;
+	}
+	
+	canvasCtx.stroke();
+	
+	doVisualization = requestAnimationFrame(runViz);
+}
 
 
 ///////// TESTS
