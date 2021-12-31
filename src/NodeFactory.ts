@@ -1,5 +1,6 @@
+import { ADSREnvelope } from "./ADSREnvelope";
+
 class NodeFactory extends AudioContext {
-	
 	constructor(){
 		super();
 		
@@ -143,15 +144,18 @@ class NodeFactory extends AudioContext {
 	} // end constructor
 	
 	getGainNodes(){
-		return [...Object.keys(this.nodeStore)].filter((key) => key.indexOf("Gain") >= 0).map((gainId) => this.nodeStore[gainId]);
+		return [...Object.keys(this.nodeStore)]
+                .filter((key) => key.indexOf("Gain") >= 0)
+                .map((gainId) => this.nodeStore[gainId]);
 	}
 	
 	getOscNodes(){
-		return [...Object.keys(this.nodeStore)].filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
+		return [...Object.keys(this.nodeStore)]
+                .filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
 	}
 	
 	createAudioContextDestinationUI(){
-		let audioCtxDest = document.createElement('div');
+		const audioCtxDest = document.createElement('div');
 		audioCtxDest.id = this.destination.constructor.name;
 		audioCtxDest.style.border = "1px solid #000";
 		audioCtxDest.style.borderRadius = "20px 20px 20px 20px";
@@ -164,7 +168,7 @@ class NodeFactory extends AudioContext {
 		audioCtxDest.style.left = "45%";
 		audioCtxDest.style.zIndex = "10";
 		
-		let title = document.createElement("h2");
+		const title = document.createElement("h2");
 		title.textContent = "audio context destination";
 		audioCtxDest.appendChild(title);
 		document.getElementById("nodeArea").appendChild(audioCtxDest);
@@ -272,7 +276,7 @@ class NodeFactory extends AudioContext {
 	// attack, decay, sustain, release envelope node
 	// this will target the params of another node like Oscillator or BiquadFilter or Gain 
 	// for now we should keep this very simple! :)
-	_createADSREnvelopeNode(){
+	_createADSREnvelopeNode(): ADSREnvelope {
 		let envelope = new ADSREnvelope();
 		envelope.id = envelope.constructor.name + this.nodeCounts.addNode(envelope);
 		return envelope;
@@ -522,7 +526,6 @@ class NodeFactory extends AudioContext {
 	
 	// create and add a new wave node to the interface
 	addNewNode(nodeType, addToInterface=true){
-		
 		// create the node object
 		let newNode = null;
 		
