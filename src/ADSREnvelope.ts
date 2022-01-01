@@ -1,4 +1,4 @@
-type ADSR = {
+interface ADSR {
     attack:       number;
     sustain:      number;
     decay:        number;
@@ -6,7 +6,7 @@ type ADSR = {
     sustainLevel: number;
 };
 
-export class ADSREnvelope {
+export class ADSREnvelope implements ADSR {
     
     attack: number;
     sustain: number;

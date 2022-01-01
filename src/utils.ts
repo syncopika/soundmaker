@@ -3,9 +3,7 @@
 	ui stuff
 
 ***/
-
 function drawLineBetween(htmlElement1, htmlElement2, dash=false){
-	
 	// instead, we should create an individual svg per line
 	let svg = document.getElementById("svgCanvas");
 	

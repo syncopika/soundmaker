@@ -125,21 +125,20 @@ class SoundMaker {
 
 function processNote(noteFreq, nodeFactory){
 	// this is used to create and use new nodes each time a note needs to be played
-	let nodeStore = nodeFactory.nodeStore;
+	const nodeStore = nodeFactory.nodeStore;
 
 	// probably should look at not just osc nodes but those with 0 input.
 	// i.e. OscillatorNodes, AudioBufferSourceNodes
-	let oscNodes = nodeFactory.getOscNodes();
+	const oscNodes = nodeFactory.getOscNodes();
 	
-	let nodesToStart = [];
+	const nodesToStart = [];
 	oscNodes.forEach((osc) => {
-		
 		// create a new osc node from the template props
-		let oscTemplateNode = nodeStore[osc].node;
-		let templateProps = {};
+		const oscTemplateNode = nodeStore[osc].node;
+		const templateProps = {};
 		
 		Object.keys(oscTemplateNode.__proto__).forEach((propName) => {
-			let prop = oscTemplateNode[propName];
+			const prop = oscTemplateNode[propName];
 			templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
 			
 			if(propName === "frequency"){
@@ -147,15 +146,15 @@ function processNote(noteFreq, nodeFactory){
 			}
 		});
 		
-		let newOsc = new window[oscTemplateNode.constructor.name](nodeFactory, templateProps);
+		const newOsc = new window[oscTemplateNode.constructor.name](nodeFactory, templateProps);
 		nodesToStart.push(newOsc);
 		
 		// need to go down all the way to each node and make connections
 		// gain nodes don't need to be touched as they're already attached to the context dest by default
-		let connections = nodeStore[osc].feedsInto;
+		const connections = nodeStore[osc].feedsInto;
 		connections.forEach((conn) => {
 			// connect the new osc node to this connection 
-			let sinkNode = nodeStore[conn].node;
+			const sinkNode = nodeStore[conn].node;
 			
 			// make connection
 			newOsc.connect(sinkNode);
@@ -179,17 +178,17 @@ function processNote(noteFreq, nodeFactory){
 		});
 	});
 	
-	let time = nodeFactory.currentTime;
-	let gainNodes = nodeFactory.getGainNodes();
+	const time = nodeFactory.currentTime;
+	const gainNodes = nodeFactory.getGainNodes();
 
 	gainNodes.forEach((gain) => {
 		// we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
 		// maybe use dotted lines?
-		let gainNode = gain.node;
-		let adsr = getADSRFeed(gain);
+		const gainNode = gain.node;
+		const adsr = getADSRFeed(gain);
 		if(adsr){
 			// if an adsr envelope feeds into this gain node, run the adsr function on the gain
-			let envelope = nodeStore[adsr].node;
+			const envelope = nodeStore[adsr].node;
 			envelope.applyADSR(gainNode.gain, time);
 		}else{
 			gainNode.gain.setValueAtTime(gainNode.gain.value, time);
@@ -201,7 +200,7 @@ function processNote(noteFreq, nodeFactory){
 
 function getADSRFeed(sinkNode){
 	// check if sinkNode has an ADSR envelope
-	let feedsFrom = sinkNode.feedsFrom;
+	const feedsFrom = sinkNode.feedsFrom;
 	for(let i = 0; i < feedsFrom.length; i++){
 		let source = feedsFrom[i];
 		if(source.indexOf("ADSR") >= 0){

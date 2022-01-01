@@ -1,5 +1,19 @@
 import { ADSREnvelope } from "./ADSREnvelope";
 
+/*(
+type Node = {
+    'node': node, 
+    'feedsInto': [],
+    'feedsFrom': []
+};*/
+
+// https://stackoverflow.com/questions/57264080/typescript-array-of-specific-string-values
+type NodeTypes = "waveNode" |
+                 "biquadFilterNode" |
+                 "noiseNode" |
+                 "gainNode" |
+                 "ADSREnvelope";
+
 class NodeFactory extends AudioContext {
 	constructor(){
 		super();
@@ -16,7 +30,7 @@ class NodeFactory extends AudioContext {
 			// store this function and the node count of diff node types in same object
 			// use nodeName if supplied
 			'addNode': function(node){
-				let nodeType = node.constructor.name;
+				const nodeType = node.constructor.name;
 				
 				// just keeping count here
 				if(this[nodeType]){
@@ -28,7 +42,7 @@ class NodeFactory extends AudioContext {
 				return this[nodeType];
 			},
 			'deleteNode': function(node, nodeName=null){
-				let nodeType = node.constructor.name;
+				const nodeType = node.constructor.name;
 				this[nodeType]--;
 				return this[nodeType];
 			}
@@ -208,7 +222,7 @@ class NodeFactory extends AudioContext {
 		// when a note is played multiple times, each time a new oscillator needs to 
 		// be created. but we can save the properties of the oscillator and reuse that data.
 		// so basically we create a dummy oscillator for the purposes of storing information (as a template)
-		let osc = this.createOscillator();
+		const osc = this.createOscillator();
 		
 		// default params 
 		osc.frequency.value = 440; // A @ 440 Hz
@@ -258,7 +272,7 @@ class NodeFactory extends AudioContext {
 	
 	// create a biquadfilter node
 	_createBiquadFilterNode(){
-		let bqFilterNode = this.createBiquadFilter();
+		const bqFilterNode = this.createBiquadFilter();
 		
 		bqFilterNode.frequency.value = 440;
 		bqFilterNode.detune.value = 0;
@@ -277,40 +291,40 @@ class NodeFactory extends AudioContext {
 	// this will target the params of another node like Oscillator or BiquadFilter or Gain 
 	// for now we should keep this very simple! :)
 	_createADSREnvelopeNode(): ADSREnvelope {
-		let envelope = new ADSREnvelope();
+		const envelope = new ADSREnvelope();
 		envelope.id = envelope.constructor.name + this.nodeCounts.addNode(envelope);
 		return envelope;
 	}
 	
 	_deleteNode(node){
-		let nodeName = node.id;
-		let nodeToDelete = this.nodeStore[nodeName].node;
+		const nodeName = node.id;
+		const nodeToDelete = this.nodeStore[nodeName].node;
 		
 		// decrement count 
 		this.nodeCounts.deleteNode(node);
 		
 		// unhook all connections in the UI
-		let connectionsTo = this.nodeStore[nodeName].feedsInto;
+		const connectionsTo = this.nodeStore[nodeName].feedsInto;
 		if(connectionsTo){
 			connectionsTo.forEach((connection) => {
 				// remove the UI representation of the connection
-				let svg = document.getElementById("svgCanvas:" + nodeName + ":" + connection);
+				const svg = document.getElementById("svgCanvas:" + nodeName + ":" + connection);
 				document.getElementById("nodeArea").removeChild(svg);
 				
 				// also remove the reference of the node being deleted from this connected node's feedsFrom
-				let targetFeedsFrom = this.nodeStore[connection].feedsFrom;
+				const targetFeedsFrom = this.nodeStore[connection].feedsFrom;
 				this.nodeStore[connection].feedsFrom = targetFeedsFrom.filter(node => node !== nodeName);
 			});
 		}
 		
-		let connectionsFrom = this.nodeStore[nodeName].feedsFrom;
+		const connectionsFrom = this.nodeStore[nodeName].feedsFrom;
 		if(connectionsFrom){
 			connectionsFrom.forEach((connection) => {
-				let svg = document.getElementById("svgCanvas:" + connection + ":" + nodeName);
+				const svg = document.getElementById("svgCanvas:" + connection + ":" + nodeName);
 				document.getElementById("nodeArea").removeChild(svg);
 				
 				// also remove the reference of the node being deleted from this connected node's feedsInto
-				let targetFeedsInto = this.nodeStore[connection].feedsInto;
+				const targetFeedsInto = this.nodeStore[connection].feedsInto;
 				this.nodeStore[connection].feedsInto = targetFeedsInto.filter(node => node !== nodeName);
 			});
 		}
@@ -324,17 +338,15 @@ class NodeFactory extends AudioContext {
 	
 	_addNodeToInterface(node, x, y){
 		// place randomly in designated area?
-		let uiElement = this._createNodeUIElement(node);
-		
+		const uiElement = this._createNodeUIElement(node);
 		uiElement.style.top = x || '100px';
 		uiElement.style.left = y || '100px';
-		
 		document.getElementById('nodeArea').appendChild(uiElement);
 	}
 	
 	_createNodeUIElement(node){
 		// add event listener to allow it to be hooked up to another node if possible
-		let uiElement = document.createElement('div');
+		const uiElement = document.createElement('div');
 		uiElement.style.backgroundColor = "#fff";
 		uiElement.style.zIndex = 10;
 		uiElement.style.position = 'absolute';
@@ -345,21 +357,19 @@ class NodeFactory extends AudioContext {
 		uiElement.classList.add("nodeElement");
 		uiElement.id = node.id;
 		
-		let nodeInfo = this.nodeStore[node.id];
+		const nodeInfo = this.nodeStore[node.id];
 		
 		uiElement.addEventListener("mousedown", (evt) => {
-
-			let offsetX = evt.clientX - uiElement.offsetLeft + window.pageXOffset;
-			let offsetY = evt.clientY - uiElement.offsetTop + window.pageYOffset;
+			const offsetX = evt.clientX - uiElement.offsetLeft + window.pageXOffset;
+			const offsetY = evt.clientY - uiElement.offsetTop + window.pageYOffset;
 	
 			function moveHelper(x, y){
-				
 				uiElement.style.left = (x + 'px');
 				uiElement.style.top = (y + 'px');
 				
 				if(nodeInfo.feedsInto){
 					nodeInfo.feedsInto.forEach((connection) => {
-						let svg = document.getElementById("svgCanvas:" + uiElement.id + ":" + connection);
+						const svg = document.getElementById("svgCanvas:" + uiElement.id + ":" + connection);
 						document.getElementById("nodeArea").removeChild(svg);
 						if(uiElement.id.indexOf("ADSR") >= 0){
 							drawLineBetween(uiElement, document.getElementById(connection), true);
@@ -371,7 +381,7 @@ class NodeFactory extends AudioContext {
 				
 				if(nodeInfo.feedsFrom){
 					nodeInfo.feedsFrom.forEach((connection) => {
-						let svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
+						const svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
 						document.getElementById("nodeArea").removeChild(svg);
 						if(connection.indexOf("ADSR") >= 0){
 							drawLineBetween(document.getElementById(connection), uiElement, true);
@@ -403,18 +413,16 @@ class NodeFactory extends AudioContext {
 		});
 		
 		// add the name of the node
-		let name = document.createElement('h4');
+		const name = document.createElement('h4');
 		name.textContent = node.id;
 		uiElement.appendChild(name);
 		
 		// connect-to-other-nodes functionality 
-		let connectButton = document.createElement('button');
+		const connectButton = document.createElement('button');
 		connectButton.textContent = "connect to another node";
 		connectButton.addEventListener("click", (evt) => {
-			
 			function selectNodeToConnectHelper(evt, source, nodeStore){
-				
-				let target = evt.target;
+				const target = evt.target;
 				if(!evt.target.classList.contains("nodeElement")){
 					target = evt.target.parentNode;
 				}
@@ -436,10 +444,10 @@ class NodeFactory extends AudioContext {
 				// store the target, or the sink for this source, html id 
 				// make it a bidrectional graph -> the node that gets fed 
 				// should also know the nodes that feed into it.
-				let sourceConnections = nodeStore[source.id];
+				const sourceConnections = nodeStore[source.id];
 				sourceConnections["feedsInto"].push(target.id);
 				
-				let destConnections = nodeStore[target.id];
+				const destConnections = nodeStore[target.id];
 				destConnections["feedsFrom"].push(source.id);
 				
 				// update UI to show link between nodes
@@ -453,7 +461,7 @@ class NodeFactory extends AudioContext {
 				// from all the nodes
 				[...Object.keys(nodeStore)].forEach((node) => {
 					if(node !== source.id){
-						let otherNode = document.getElementById(node);
+						const otherNode = document.getElementById(node);
 						otherNode.removeEventListener("mouseover", mouseoverNode);
 						otherNode.removeEventListener("mouseleave", mouseleaveNode);
 						otherNode.removeEventListener("click", selectNodeToConnectTo);
@@ -461,7 +469,7 @@ class NodeFactory extends AudioContext {
 				});
 			}
 			
-			let nodeStore = this.nodeStore;
+			const nodeStore = this.nodeStore;
 			function selectNodeToConnectTo(evt){
 				selectNodeToConnectHelper(evt, uiElement, nodeStore);
 			}
@@ -483,7 +491,7 @@ class NodeFactory extends AudioContext {
 				evt.preventDefault();
 				[...Object.keys(nodeStore)].forEach((node) => {
 					if(node !== source.id){
-						let otherNode = document.getElementById(node);
+						const otherNode = document.getElementById(node);
 						otherNode.removeEventListener("mouseover", mouseoverNode);
 						otherNode.removeEventListener("mouseleave", mouseleaveNode);
 						otherNode.removeEventListener("click", selectNodeToConnectTo);
@@ -502,7 +510,7 @@ class NodeFactory extends AudioContext {
 			// add an event listener for all node elements that this node could connect with 
 			[...Object.keys(nodeStore)].forEach((node) => {
 				if(node !== uiElement.id){			
-					let otherNode = document.getElementById(node);
+					const otherNode = document.getElementById(node);
 					otherNode.addEventListener("mouseover", mouseoverNode);
 					otherNode.addEventListener("mouseleave", mouseleaveNode);
 					otherNode.addEventListener("click", selectNodeToConnectTo);
@@ -513,7 +521,7 @@ class NodeFactory extends AudioContext {
 		uiElement.appendChild(document.createElement('br'));
 		
 		// delete node functionality
-		let deleteButton = document.createElement('button');
+		const deleteButton = document.createElement('button');
 		deleteButton.textContent = "delete";
 		deleteButton.addEventListener('click', (evt) => {
 			this._deleteNode(node);
@@ -525,7 +533,7 @@ class NodeFactory extends AudioContext {
 	}
 	
 	// create and add a new wave node to the interface
-	addNewNode(nodeType, addToInterface=true){
+	addNewNode(nodeType: NodeTypes, addToInterface=true){
 		// create the node object
 		let newNode = null;
 		
@@ -548,13 +556,11 @@ class NodeFactory extends AudioContext {
 		this._storeNode(newNode, newNode.id);
 		
 		// this should be a separate function
-		if(addToInterface){
-			this._addNodeToInterface(newNode);
-		}
+		if(addToInterface) this._addNodeToInterface(newNode);
 		
 		if(nodeType === "gainNode"){
 			// gain node is special :)
-			let audioCtx = this.destination.constructor.name;
+			const audioCtx = this.destination.constructor.name;
 			this.nodeStore[newNode.id]["feedsInto"] = [audioCtx];
 			this.nodeStore[audioCtx]["feedsFrom"].push(newNode.id);
 			drawLineBetween(document.getElementById(newNode.id), document.getElementById(audioCtx)); // order matters! :0
