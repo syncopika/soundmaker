@@ -11,34 +11,34 @@ function drawLineBetween(htmlElement1, htmlElement2, dash=false){
 		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 		svg.style.position = "absolute";
 		svg.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
-		svg.style.zIndex = 0;
+		svg.style.zIndex = "0";
 		svg.style.height = "1000px"; // calculate these after you calculate the line dimensions?
 		svg.style.width = "1000px";	// calculate these after you calculate the line dimensions?
 		document.getElementById('nodeArea').appendChild(svg);
 	}
 	
-	let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+	const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
 	line.classList.add('line');
 	line.setAttribute('stroke', '#000');
 	line.setAttribute('stroke-width', '1px');
 	
 	if(dash){
 		// for dotted lines
-		line.setAttribute('stroke-dasharray', 10);
+		line.setAttribute('stroke-dasharray', "10");
 	}
 	
-	let element1x = htmlElement1.offsetLeft + document.body.scrollLeft + ((htmlElement1.offsetWidth)/2);
-	let element1y = htmlElement1.offsetTop + document.body.scrollTop + ((htmlElement1.offsetHeight)/2);
-	let element2x = htmlElement2.offsetLeft + document.body.scrollLeft + ((htmlElement2.offsetWidth)/2);
-	let element2y = htmlElement2.offsetTop + document.body.scrollTop + ((htmlElement2.offsetHeight)/2);
+	const element1x = htmlElement1.offsetLeft + document.body.scrollLeft + ((htmlElement1.offsetWidth)/2);
+	const element1y = htmlElement1.offsetTop + document.body.scrollTop + ((htmlElement1.offsetHeight)/2);
+	const element2x = htmlElement2.offsetLeft + document.body.scrollLeft + ((htmlElement2.offsetWidth)/2);
+	const element2y = htmlElement2.offsetTop + document.body.scrollTop + ((htmlElement2.offsetHeight)/2);
 	
 	line.setAttribute('x1', element1x);
 	line.setAttribute('y1', element1y);
 	line.setAttribute('x2', element2x);
 	line.setAttribute('y2', element2y);
 	
-	let maxWidth = Math.max(element1x, element2x) + 200;
-	let maxHeight = Math.max(element1y, element2y) + 200;
+	const maxWidth = Math.max(element1x, element2x) + 200;
+	const maxHeight = Math.max(element1y, element2y) + 200;
 	svg.style.height = parseInt(svg.style.height) < maxHeight ? (maxHeight + "px") : svg.style.height;
 	svg.style.width = parseInt(svg.style.width) < maxWidth ? (maxWidth + "px") : svg.style.width;
 	
@@ -46,17 +46,17 @@ function drawLineBetween(htmlElement1, htmlElement2, dash=false){
 }
 
 function showParameterEditWindow(nodeInfo, valueRanges){
-	let editWindow = document.getElementById("editNode");
+	const editWindow = document.getElementById("editNode");
 	editWindow.style.display = "block";
 	
 	while(editWindow.firstChild){
 		editWindow.removeChild(editWindow.firstChild);
 	}
-	let title = document.createElement("h3");
+	const title = document.createElement("h3");
 	title.textContent = nodeInfo.node.id;
 	editWindow.appendChild(title);
 	
-	let node = nodeInfo.node;
+	const node = nodeInfo.node;
 	let customizableProperties = Object.keys(nodeInfo.node.__proto__);
 
 	if(customizableProperties.length === 0){
@@ -65,12 +65,12 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 	}
 
 	customizableProperties.forEach((prop) => {
-		let propertyDiv = document.createElement('div');
+		const propertyDiv = document.createElement('div');
 		propertyDiv.style.display = "inline-block";
 		propertyDiv.style.marginRight = "3%";
 		propertyDiv.style.marginLeft = "3%";
 		
-		let property = document.createElement('p');
+		const property = document.createElement('p');
 		propertyDiv.appendChild(property);
 		
 		let text = prop;
@@ -92,7 +92,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			let props = valueRanges[node.constructor.name] || valueRanges[node.type];
 			props = props[prop];
 			
-			let slider = document.createElement('input');
+			const slider = document.createElement('input');
 			slider.id = text;
 			slider.setAttribute('type', 'range');
 			slider.setAttribute('max', props ? props['max'] : 0.5);
@@ -100,9 +100,9 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			slider.setAttribute('step', props ? props['step'] : 0.01);
 			
 			// also allow value input via text edit box 
-			let editBox = document.createElement('input');
+			const editBox = document.createElement('input');
 			editBox.id = text + '-edit';
-			editBox.setAttribute('size', 6);
+			editBox.setAttribute('size', "6");
 			editBox.setAttribute('type', 'text');
 			
 			if(node[prop].value){
@@ -121,11 +121,11 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			editBox.addEventListener('input', (evt) => {
 				// evaluate the new value. 
 				// if it's a valid value, update the param it belongs to.
-				let inputtedValue = parseFloat(evt.target.value);
+				const inputtedValue = parseFloat((<HTMLInputElement>evt.target).value);
 				if(inputtedValue >= parseFloat(slider.getAttribute('min')) &&
 					inputtedValue <= parseFloat(slider.getAttribute('max'))){
 						
-						slider.setAttribute('value', inputtedValue);
+						slider.setAttribute('value', (inputtedValue).toString());
 						
 						if(node[prop].value !== undefined){
 							node[prop].value = inputtedValue;
@@ -141,8 +141,8 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 			});
 			
 			slider.addEventListener('input', function(evt){
-				let newVal = parseFloat(evt.target.value);
-				editBox.value = newVal;
+				const newVal = parseFloat((<HTMLInputElement>evt.target).value);
+				editBox.value = (newVal).toString();
 				
 				// update node
 				if(node[prop].value !== undefined){
@@ -160,7 +160,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 				// dropdown box for type
 				editWindow.appendChild(propertyDiv);
 				
-				let dropdown = document.createElement('select');
+				const dropdown = document.createElement('select');
 				dropdown.id = text + "Type";
 				
 				let options = [];
@@ -172,12 +172,12 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 					options = valueRanges["filterType"];
 				}
 				options.forEach((opt) => {
-					let option = document.createElement('option');
+					const option = document.createElement('option');
 					option.textContent = opt;
 					dropdown.appendChild(option);
 				});
 				dropdown.addEventListener('change', (evt) => {
-					let val = dropdown.options[dropdown.selectedIndex].value;
+					const val = dropdown.options[dropdown.selectedIndex].value;
 					nodeInfo.node[prop] = val;
 				});
 				dropdown.value = node[prop];
@@ -187,7 +187,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 	});
 	
 	// allow user to close param edit window
-	let hideWindow = document.createElement('p');
+	const hideWindow = document.createElement('p');
 	hideWindow.style.margin = "0 auto";
 	hideWindow.style.marginTop = "2%";
 	hideWindow.style.width = "3%";
@@ -296,9 +296,9 @@ function processPresetImport(data, nodeFactory){
 			// make sure line doesn't exist already
 			if(!document.getElementById("svgCanvas:" + nodeId + ":" + sinkId)){
 				if(nodeId.indexOf("ADSR") > -1){
-					drawLineBetween(source, sink, dash=true);
+					drawLineBetween(source, sink, true);
 				}else{
-					drawLineBetween(source, sink, dash=false);
+					drawLineBetween(source, sink, false);
 				}
 			}
 		});
@@ -335,10 +335,11 @@ function exportPreset(nodeFactory){
 	currNodeStoreKeys.forEach((node) => {
 		let currNode = currNodeStore[node];
 		
-		let nodeProps = {};
-		nodeProps.id = currNode.node.id;
-		nodeProps.feedsFrom = currNode.feedsFrom;
-		nodeProps.feedsInto = currNode.feedsInto;
+		let nodeProps = {
+            id: currNode.node.id,
+            feedsFrom: currNode.feedsFrom,
+            feedsInto: currNode.feedsInto,
+        };
 		
 		let params = Object.keys(currNode.node.__proto__);
 		if(params.length === 0){
