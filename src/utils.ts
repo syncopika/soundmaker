@@ -1,14 +1,17 @@
+import { NodeFactory } from "./NodeFactory";
+
+
 /***
 
 	ui stuff
 
 ***/
-function drawLineBetween(htmlElement1, htmlElement2, dash=false){
+function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, dash=false){
 	// instead, we should create an individual svg per line
 	let svg = document.getElementById("svgCanvas");
 	
-	if(!svg){
-		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	if(svg !== null){
+		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')!;
 		svg.style.position = "absolute";
 		svg.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
 		svg.style.zIndex = "0";
@@ -208,13 +211,13 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 ***/
 
 // import preset 
-function importPreset(nodeFactory){
+function importPreset(nodeFactory: NodeFactory){
 	let input = document.getElementById('importInstrumentPresetInput');
 	input.addEventListener('change', importInstrumentPreset(nodeFactory), false);
 	input.click();
 }
 
-function processPresetImport(data, nodeFactory){
+function processPresetImport(data, nodeFactory: NodeFactory){
 	// clear out current nodes
 	nodeFactory.reset();
 	
@@ -305,7 +308,7 @@ function processPresetImport(data, nodeFactory){
 	}	
 }
 
-function importInstrumentPreset(nodeFactory){
+function importInstrumentPreset(nodeFactory: NodeFactory){
 	return (function(nf){
 		return function(evt){
 			let reader = new FileReader();
@@ -323,7 +326,7 @@ function importInstrumentPreset(nodeFactory){
 	})(nodeFactory);
 }
 
-function exportPreset(nodeFactory){
+function exportPreset(nodeFactory: NodeFactory){
 	let fileName = prompt("enter filename");
 	if(fileName === null || fileName === ""){
 		return;
@@ -386,7 +389,7 @@ function exportPreset(nodeFactory){
 	link.click();
 }
 
-function loadDemoPreset(presetName, nodeFactory){
+function loadDemoPreset(presetName: string, nodeFactory: NodeFactory){
 	fetch("demo-presets/" + presetName + ".json")
 		.then(response => response.json())
 		.then(data => {

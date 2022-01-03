@@ -20,3 +20,9 @@ https://blog.landr.com/adsr-envelopes-infographic/
 
 https://stackoverflow.com/questions/17786618/how-to-use-z-index-in-svg-elements -> order of svg elements matters!
 https://stackoverflow.com/questions/11701461/attach-events-to-svg-paths -> fill can't be none
+
+// typescript stuff
+https://www.typescriptlang.org/docs/handbook/tsconfig-json.html -> super annoying that tsconfig.json is ignored when tsc'ing individual files :/
+https://stackoverflow.com/questions/52304422/property-values-does-not-exist-on-type-objectconstructor
+https://github.com/DefinitelyTyped/DefinitelyTyped/issues/41301 -> no AudioContext type error
+https://stackoverflow.com/questions/57086672/element-implicitly-has-an-any-type-because-expression-of-type-string-cant-b -> 'as keyof' is helpful (see ADSREnvelope)

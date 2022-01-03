@@ -8,13 +8,20 @@ type Node = {
 };*/
 
 // https://stackoverflow.com/questions/57264080/typescript-array-of-specific-string-values
-type NodeTypes = "waveNode" |
+export type NodeTypes = "waveNode" |
                  "biquadFilterNode" |
                  "noiseNode" |
                  "gainNode" |
                  "ADSREnvelope";
 
-class NodeFactory extends AudioContext {
+export class NodeFactory extends AudioContext {
+    
+    nodeColors: Record<string, string>;
+    nodeStore: Record<any, any>; // TODO: something more specific than any
+    nodeCounts: any; // TODO: this too?
+    valueRanges: Record<string, any>;
+    analyserNode: any;
+    
 	constructor(){
 		super();
 		

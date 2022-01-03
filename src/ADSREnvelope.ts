@@ -25,7 +25,7 @@ export class ADSREnvelope implements ADSR {
 	updateParams(params: ADSR){
 		for(let param in params){
 			if(param in this){
-				this[param] = params[param];
+				this[param as keyof ADSR] = params[param as keyof ADSR];
 			}
 		}
 	}
