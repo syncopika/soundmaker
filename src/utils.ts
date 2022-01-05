@@ -17,7 +17,8 @@ function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, d
 		svg.style.zIndex = "0";
 		svg.style.height = "1000px"; // calculate these after you calculate the line dimensions?
 		svg.style.width = "1000px";	// calculate these after you calculate the line dimensions?
-		document.getElementById('nodeArea').appendChild(svg);
+        
+        document.getElementById('nodeArea')!.appendChild(svg);
 	}
 	
 	const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -35,10 +36,10 @@ function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, d
 	const element2x = htmlElement2.offsetLeft + document.body.scrollLeft + ((htmlElement2.offsetWidth)/2);
 	const element2y = htmlElement2.offsetTop + document.body.scrollTop + ((htmlElement2.offsetHeight)/2);
 	
-	line.setAttribute('x1', element1x);
-	line.setAttribute('y1', element1y);
-	line.setAttribute('x2', element2x);
-	line.setAttribute('y2', element2y);
+	line.setAttribute('x1', String(element1x));
+	line.setAttribute('y1', String(element1y));
+	line.setAttribute('x2', String(element2x));
+	line.setAttribute('y2', String(element2y));
 	
 	const maxWidth = Math.max(element1x, element2x) + 200;
 	const maxHeight = Math.max(element1y, element2y) + 200;

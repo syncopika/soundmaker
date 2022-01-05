@@ -1,3 +1,5 @@
+import { NodeFactory } from "./NodeFactory";
+
 const NOTE_FREQ = {
 	"C8": 4186.01,
 	"B7": 3951.07,
@@ -111,6 +113,8 @@ const NOTE_FREQ = {
 
 // maybe move all the UI handling stuff to another class that will be comprised of the nodefactory class?
 class SoundMaker {
+    nodeFactory: NodeFactory;
+    
 	constructor(){
 		this.nodeFactory = new NodeFactory();
 		this.nodeFactory.suspend(); // need to suspend audio context (which a node factory is) initially
@@ -345,8 +349,8 @@ canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
 // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
 let doVisualization = requestAnimationFrame(runViz); // keep the request id around to be able to cancel if needed
 function runViz(){
-	const width = canvas.width;
-	const height = canvas.height;
+	const width = (canvas as HTMLCanvasElement).width;
+	const height = (canvas as HTMLCanvasElement).height;
 	
 	soundMaker.nodeFactory.analyserNode.getByteTimeDomainData(dataArray);
 	canvasCtx.fillStyle = 'rgb(200, 200, 200)';
