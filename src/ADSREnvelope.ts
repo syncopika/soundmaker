@@ -6,6 +6,10 @@ interface ADSR {
     sustainLevel: number;
 };
 
+interface NodeParam extends AudioParam {
+	baseValue: number;
+};
+
 export class ADSREnvelope implements ADSR {
     
     attack: number;
@@ -13,6 +17,7 @@ export class ADSREnvelope implements ADSR {
     decay: number;
     release: number;
     sustainLevel: number;
+	id: string;
     
 	constructor(){
 		this.attack = 0;
@@ -20,6 +25,7 @@ export class ADSREnvelope implements ADSR {
 		this.decay = 0;
 		this.release = 0;
 		this.sustainLevel = 0;
+		this.id = "";
 	}
 
 	updateParams(params: ADSR){
@@ -31,7 +37,7 @@ export class ADSREnvelope implements ADSR {
 	}
 	
     // need a type for targetNodeParam
-	applyADSR(targetNodeParam, start: number){
+	applyADSR(targetNodeParam: NodeParam, start: number){
 		// targetNodeParam might be the gain property of a gain node, or a filter node for example
 		// the targetNode just needs to have fields that make sense to be manipulated with ADSR
 		// i.e. pass in gain.gain as targetNodeParam

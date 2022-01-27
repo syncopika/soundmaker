@@ -22,9 +22,11 @@ function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, d
 	}
 	
 	const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-	line.classList.add('line');
-	line.setAttribute('stroke', '#000');
-	line.setAttribute('stroke-width', '1px');
+	if(line !== null){
+		line.classList.add('line');
+		line.setAttribute('stroke', '#000');
+		line.setAttribute('stroke-width', '1px');
+	}
 	
 	if(dash){
 		// for dotted lines
@@ -36,21 +38,25 @@ function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, d
 	const element2x = htmlElement2.offsetLeft + document.body.scrollLeft + ((htmlElement2.offsetWidth)/2);
 	const element2y = htmlElement2.offsetTop + document.body.scrollTop + ((htmlElement2.offsetHeight)/2);
 	
-	line.setAttribute('x1', String(element1x));
-	line.setAttribute('y1', String(element1y));
-	line.setAttribute('x2', String(element2x));
-	line.setAttribute('y2', String(element2y));
-	
-	const maxWidth = Math.max(element1x, element2x) + 200;
-	const maxHeight = Math.max(element1y, element2y) + 200;
-	svg.style.height = parseInt(svg.style.height) < maxHeight ? (maxHeight + "px") : svg.style.height;
-	svg.style.width = parseInt(svg.style.width) < maxWidth ? (maxWidth + "px") : svg.style.width;
-	
-	svg.appendChild(line);
+	if(svg !== null && line !== null){
+		line.setAttribute('x1', String(element1x));
+		line.setAttribute('y1', String(element1y));
+		line.setAttribute('x2', String(element2x));
+		line.setAttribute('y2', String(element2y));
+		
+		const maxWidth = Math.max(element1x, element2x) + 200;
+		const maxHeight = Math.max(element1y, element2y) + 200;
+		svg.style.height = parseInt(svg.style.height) < maxHeight ? (maxHeight + "px") : svg.style.height;
+		svg.style.width = parseInt(svg.style.width) < maxWidth ? (maxWidth + "px") : svg.style.width;
+		
+		svg.appendChild(line);
+	}
 }
 
 function showParameterEditWindow(nodeInfo, valueRanges){
 	const editWindow = document.getElementById("editNode");
+	if(editWindow === null) return;
+	
 	editWindow.style.display = "block";
 	
 	while(editWindow.firstChild){
@@ -175,7 +181,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 					// use filterType
 					options = valueRanges["filterType"];
 				}
-				options.forEach((opt) => {
+				options.forEach((opt: string) => {
 					const option = document.createElement('option');
 					option.textContent = opt;
 					dropdown.appendChild(option);
@@ -213,9 +219,11 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 
 // import preset 
 function importPreset(nodeFactory: NodeFactory){
-	let input = document.getElementById('importInstrumentPresetInput');
-	input.addEventListener('change', importInstrumentPreset(nodeFactory), false);
-	input.click();
+	const input = document.getElementById('importInstrumentPresetInput');
+	if(input !== null){
+		input.addEventListener('change', importInstrumentPreset(nodeFactory), false);
+		input.click();
+	}
 }
 
 function processPresetImport(data, nodeFactory: NodeFactory){
@@ -238,7 +246,7 @@ function processPresetImport(data, nodeFactory: NodeFactory){
 			nodeFactory.addNewNode("noiseNode");
 		}else if(nodeId.indexOf("BiquadFilter") > -1){
 			// biquad filter node
-			nodeFactory.addNewNode("BiqudFilterNode");
+			nodeFactory.addNewNode("biquadFilterNode");
 		}
 		
 		if(nodeId !== "AudioDestinationNode"){
@@ -282,27 +290,29 @@ function processPresetImport(data, nodeFactory: NodeFactory){
 	// also offset the nodes in the UI a bit so the user can see that they were all loaded
 	// otherwise they're stacked perfectly on each other and it looks like there's only a single node
 	for(let nodeId in data){
-		let node = nodeFactory.nodeStore[nodeId];
+		const node = nodeFactory.nodeStore[nodeId];
 		node.feedsInto.forEach((sinkId) => {
-			let source = document.getElementById(nodeId);
-			
-			// offset source node UI slightly
-			let maxTop = parseInt(source.style.top) + 80;
-			let minTop = parseInt(source.style.top) - 80;
-			source.style.top = (Math.random() * (maxTop - minTop) + minTop) + "px";
-			
-			let maxLeft = parseInt(source.style.left) + 80;
-			let minLeft = parseInt(source.style.left) - 80;
-			source.style.left = (Math.random() * (maxLeft - minLeft) + minLeft) + "px";
-			
-			let sink = document.getElementById(sinkId);
-			
-			// make sure line doesn't exist already
-			if(!document.getElementById("svgCanvas:" + nodeId + ":" + sinkId)){
-				if(nodeId.indexOf("ADSR") > -1){
-					drawLineBetween(source, sink, true);
-				}else{
-					drawLineBetween(source, sink, false);
+			const source = document.getElementById(nodeId);
+			if(source !== null){
+				// offset source node UI slightly
+				const maxTop = parseInt(source.style.top) + 80;
+				const minTop = parseInt(source.style.top) - 80;
+				source.style.top = (Math.random() * (maxTop - minTop) + minTop) + "px";
+				
+				const maxLeft = parseInt(source.style.left) + 80;
+				const minLeft = parseInt(source.style.left) - 80;
+				source.style.left = (Math.random() * (maxLeft - minLeft) + minLeft) + "px";
+				
+				const sink = document.getElementById(sinkId);
+				const line = document.getElementById("svgCanvas:" + nodeId + ":" + sinkId);
+				
+				// make sure line doesn't exist already
+				if(line !== null && sink !== null){
+					if(nodeId.indexOf("ADSR") > -1){
+						drawLineBetween(source, sink, true);
+					}else{
+						drawLineBetween(source, sink, false);
+					}
 				}
 			}
 		});
@@ -317,7 +327,7 @@ function importInstrumentPreset(nodeFactory: NodeFactory){
 			
 			reader.onload = (function(theFile){
 				return function(e){
-					let data = JSON.parse(e.target.result)['data'];
+					const data = JSON.parse(e.target.result)['data'];
 					processPresetImport(data, nf);
 				}
 			})(file);
@@ -328,24 +338,25 @@ function importInstrumentPreset(nodeFactory: NodeFactory){
 }
 
 function exportPreset(nodeFactory: NodeFactory){
-	let fileName = prompt("enter filename");
+	const fileName = prompt("enter filename");
 	if(fileName === null || fileName === ""){
 		return;
 	}
 	
-	let objToExport = {};
-	let currNodeStore = nodeFactory.nodeStore;
-	let currNodeStoreKeys = Object.keys(currNodeStore);
-	currNodeStoreKeys.forEach((node) => {
+	const objToExport: Record<string, any> = {}; // TODO: make be not any
+	const currNodeStore = nodeFactory.nodeStore;
+	const currNodeStoreKeys = Object.keys(currNodeStore);
+	currNodeStoreKeys.forEach((node: string) => {
 		let currNode = currNodeStore[node];
 		
 		let nodeProps = {
             id: currNode.node.id,
+			node: null,
             feedsFrom: currNode.feedsFrom,
             feedsInto: currNode.feedsInto,
         };
 		
-		let params = Object.keys(currNode.node.__proto__);
+		let params = Object.keys(Object.getPrototypeOf(currNode.node));
 		if(params.length === 0){
 			// i.e. for ADSREnvelope, which is just a regular object
 			params = Object.keys(currNode.node);
@@ -378,13 +389,14 @@ function exportPreset(nodeFactory: NodeFactory){
 		objToExport[node] = nodeProps;
 	});
 	
-	let theData = {};
-	theData["name"] = fileName;
-	theData["data"] = objToExport;
+	const theData = {
+		"name": fileName,
+		"data": objToExport
+	};
 	
-	let blob = new Blob([JSON.stringify(theData, null, 2)], {type: "application/json"});
-	let url = URL.createObjectURL(blob);
-	let link = document.createElement('a');
+	const blob = new Blob([JSON.stringify(theData, null, 2)], {type: "application/json"});
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement('a');
 	link.href = url;
 	link.download = fileName + ".json";
 	link.click();

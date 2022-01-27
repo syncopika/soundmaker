@@ -1,6 +1,6 @@
-import { NodeFactory } from "./NodeFactory";
+import { NodeFactory, AudioStoreNode } from "./NodeFactory";
 
-const NOTE_FREQ = {
+const NOTE_FREQ: Record<string, number> = {
 	"C8": 4186.01,
 	"B7": 3951.07,
 	"Bb7": 3729.31,
@@ -202,11 +202,11 @@ function processNote(noteFreq, nodeFactory){
 	return nodesToStart;
 }
 
-function getADSRFeed(sinkNode){
+function getADSRFeed(sinkNode: AudioStoreNode): string | undefined {
 	// check if sinkNode has an ADSR envelope
 	const feedsFrom = sinkNode.feedsFrom;
 	for(let i = 0; i < feedsFrom.length; i++){
-		let source = feedsFrom[i];
+		const source = feedsFrom[i];
 		if(source.indexOf("ADSR") >= 0){
 			return source; // return name of ADSR envelope
 		}
@@ -218,7 +218,7 @@ function getADSRFeed(sinkNode){
 ////////////////////////// SET UP
 const soundMaker = new SoundMaker();
 const notes = [...document.getElementsByClassName("note")];
-let currPlayingNodes = [];
+let currPlayingNodes : OscillatorNode[] = [];
 
 document.getElementById('addWavNode').addEventListener('click', (e) => {
 	soundMaker.nodeFactory.addNewNode("waveNode");
@@ -342,9 +342,9 @@ soundMaker.nodeFactory.analyserNode.fftSize = 2048;
 const bufferLen = soundMaker.nodeFactory.analyserNode.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLen);
 
-const canvas = document.getElementById('vizCanvas');
-const canvasCtx = canvas.getContext('2d');
-canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+const canvas: HTMLCanvasElement = document.getElementById('vizCanvas');
+const canvasCtx = canvas!.getContext('2d');
+canvasCtx!.clearRect(0, 0, canvas!.width, canvas!.height);
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
 let doVisualization = requestAnimationFrame(runViz); // keep the request id around to be able to cancel if needed

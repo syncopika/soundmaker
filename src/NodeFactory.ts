@@ -1,11 +1,14 @@
 import { ADSREnvelope } from "./ADSREnvelope";
 
-/*(
-type Node = {
-    'node': node, 
-    'feedsInto': [],
-    'feedsFrom': []
-};*/
+interface ExtendedAudioNode extends AudioNode {
+	id: string;
+};
+
+export type AudioStoreNode = {
+    'node': ExtendedAudioNode, 
+    'feedsInto': ExtendedAudioNode[],
+    'feedsFrom': ExtendedAudioNode[]
+};
 
 // https://stackoverflow.com/questions/57264080/typescript-array-of-specific-string-values
 export type NodeTypes = "waveNode" |
@@ -14,11 +17,12 @@ export type NodeTypes = "waveNode" |
                  "gainNode" |
                  "ADSREnvelope";
 
+
 export class NodeFactory extends AudioContext {
     
     nodeColors: Record<string, string>;
-    nodeStore: Record<any, any>; // TODO: something more specific than any
-    nodeCounts: any; // TODO: this too?
+    nodeStore: Record<string, AudioStoreNode>; // TODO: something more specific than any
+    nodeCounts: Record<string, any>; // TODO: this too?
     valueRanges: Record<string, any>;
     analyserNode: any;
     
@@ -164,13 +168,13 @@ export class NodeFactory extends AudioContext {
 		}
 	} // end constructor
 	
-	getGainNodes(){
+	getGainNodes(): AudioStoreNode[] {
 		return [...Object.keys(this.nodeStore)]
                 .filter((key) => key.indexOf("Gain") >= 0)
                 .map((gainId) => this.nodeStore[gainId]);
 	}
 	
-	getOscNodes(){
+	getOscNodes(): AudioStoreNode[] {
 		return [...Object.keys(this.nodeStore)]
                 .filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
 	}
@@ -213,7 +217,7 @@ export class NodeFactory extends AudioContext {
 	}
 	
 	// store a node in this.nodeStore
-	_storeNode(node, nodeName){
+	_storeNode(node: AudioNode, nodeName: string){
 		// feedsInto would be an array of strings, where each string is a node's name
 		this.nodeStore[nodeName] = {
 			'node': node, 
@@ -343,11 +347,11 @@ export class NodeFactory extends AudioContext {
 		document.getElementById('nodeArea').removeChild(document.getElementById(nodeName));
 	}
 	
-	_addNodeToInterface(node, x, y){
+	_addNodeToInterface(node, x='100px', y='100px'){
 		// place randomly in designated area?
 		const uiElement = this._createNodeUIElement(node);
-		uiElement.style.top = x || '100px';
-		uiElement.style.left = y || '100px';
+		uiElement.style.top = x;
+		uiElement.style.left = y;
 		document.getElementById('nodeArea').appendChild(uiElement);
 	}
 	
