@@ -10,15 +10,15 @@ function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, d
 	// instead, we should create an individual svg per line
 	let svg = document.getElementById("svgCanvas");
 	
-	if(svg !== null){
-		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')!;
-		svg.style.position = "absolute";
-		svg.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
-		svg.style.zIndex = "0";
-		svg.style.height = "1000px"; // calculate these after you calculate the line dimensions?
-		svg.style.width = "1000px";	// calculate these after you calculate the line dimensions?
+	if(svg === null){
+		svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+		svg!.style.position = "absolute";
+		svg!.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
+		svg!.style.zIndex = "0";
+		svg!.style.height = "1000px"; // calculate these after you calculate the line dimensions?
+		svg!.style.width = "1000px";	// calculate these after you calculate the line dimensions?
         
-        document.getElementById('nodeArea')!.appendChild(svg);
+        document.getElementById('nodeArea')!.appendChild(svg!);
 	}
 	
 	const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
@@ -53,7 +53,7 @@ function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, d
 	}
 }
 
-function showParameterEditWindow(nodeInfo, valueRanges){
+function showParameterEditWindow(nodeInfo: AudioStoreNode, valueRanges){
 	const editWindow = document.getElementById("editNode");
 	if(editWindow === null) return;
 	
@@ -67,7 +67,7 @@ function showParameterEditWindow(nodeInfo, valueRanges){
 	editWindow.appendChild(title);
 	
 	const node = nodeInfo.node;
-	let customizableProperties = Object.keys(nodeInfo.node.__proto__);
+	let customizableProperties = Object.keys(Object.getPrototypeOf(nodeInfo.node));
 
 	if(customizableProperties.length === 0){
 		// i.e. for adsr envelope 
@@ -351,7 +351,7 @@ function exportPreset(nodeFactory: NodeFactory){
 		
 		let nodeProps = {
             id: currNode.node.id,
-			node: null,
+			node: {},
             feedsFrom: currNode.feedsFrom,
             feedsInto: currNode.feedsInto,
         };
