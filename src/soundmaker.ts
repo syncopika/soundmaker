@@ -1,4 +1,6 @@
 import { NodeFactory, AudioStoreNode } from "./NodeFactory";
+import { ADSREnvelope } from "./ADSREnvelope";
+import { ExtendedGainNode } from "./types";
 import {
     exportPreset,
     importPreset,
@@ -305,10 +307,10 @@ function setupKeyboard(notes: SVGElement[], nodeFactory: NodeFactory){
 		// apply adsr release, if any
 		const gainNodes = nodeFactory.getGainNodes();
 		gainNodes.forEach((gain) => {
-			const gainNode = gain.node;
+			const gainNode = <ExtendedGainNode>gain.node;
 			const adsr = getADSRFeed(gain);
 			if(adsr){
-				const envelope = nodeFactory.nodeStore[adsr].node;
+				const envelope = <ADSREnvelope>nodeFactory.nodeStore[adsr].node;
 				gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
 				maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
 				
@@ -352,7 +354,7 @@ setupKeyboard(notes, soundMaker.nodeFactory);
 // setup for audio visualization
 // TODO: do something about these global variables? kinda messy
 soundMaker.nodeFactory.analyserNode.fftSize = 2048;
-const bufferLen = soundMaker.nodeFactory.analyserNode.frequencyBinCount;
+const bufferLen: number = soundMaker.nodeFactory.analyserNode.frequencyBinCount;
 const dataArray = new Uint8Array(bufferLen);
 
 const canvas: HTMLCanvasElement = document.getElementById('vizCanvas');
@@ -360,7 +362,7 @@ const canvasCtx = canvas!.getContext('2d');
 canvasCtx!.clearRect(0, 0, canvas!.width, canvas!.height);
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
-let doVisualization = requestAnimationFrame(runViz); // keep the request id around to be able to cancel if needed
+let doVisualization: number = requestAnimationFrame(runViz); // keep the request id around to be able to cancel if needed
 function runViz(){
 	const width = (canvas as HTMLCanvasElement).width;
 	const height = (canvas as HTMLCanvasElement).height;

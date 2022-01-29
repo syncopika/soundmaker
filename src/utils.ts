@@ -1,4 +1,5 @@
 import { NodeFactory } from "./NodeFactory";
+import { AudioStoreNode } from "./types";
 
 /***
 
@@ -52,7 +53,7 @@ export function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLEle
 	}
 }
 
-export function showParameterEditWindow(nodeInfo: AudioStoreNode, valueRanges){
+export function showParameterEditWindow(nodeInfo: AudioStoreNode, valueRanges: any){
 	const editWindow = document.getElementById("editNode");
 	if(editWindow === null) return;
 	
@@ -320,9 +321,9 @@ export function processPresetImport(data, nodeFactory: NodeFactory){
 
 export function importInstrumentPreset(nodeFactory: NodeFactory){
 	return (function(nf){
-		return function(evt){
+		return function(evt: Event){
 			let reader = new FileReader();
-			let file = evt.target.files[0];
+			let file = (<HTMLInputElement>evt.target).files[0];
 			
 			reader.onload = (function(theFile){
 				return function(e){

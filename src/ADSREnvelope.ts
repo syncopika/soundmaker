@@ -1,13 +1,11 @@
+import { ExtendedAudioParam } from "./types";
+
 interface ADSR {
     attack:       number;
     sustain:      number;
     decay:        number;
     release:      number;
     sustainLevel: number;
-};
-
-interface NodeParam extends AudioParam {
-	baseValue: number;
 };
 
 export class ADSREnvelope implements ADSR {
@@ -37,7 +35,7 @@ export class ADSREnvelope implements ADSR {
 	}
 	
     // need a type for targetNodeParam
-	applyADSR(targetNodeParam: NodeParam, start: number){
+	applyADSR(targetNodeParam: ExtendedAudioParam, start: number){
 		// targetNodeParam might be the gain property of a gain node, or a filter node for example
 		// the targetNode just needs to have fields that make sense to be manipulated with ADSR
 		// i.e. pass in gain.gain as targetNodeParam

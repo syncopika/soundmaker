@@ -1,11 +1,15 @@
 import { ADSREnvelope } from "./ADSREnvelope";
 import {
-    ExtendedAudioNode,
+    ExtendedOscillatorNode,
+    ExtendedAudioBufferSourceNode,
+    ExtendedBiquadFilterNode,
+    ExtendedGainNode,
     AudioStoreNode,
     NodeTypes,
 } from "./types";
 import {
-    drawLineBetween
+    drawLineBetween,
+    showParameterEditWindow
 } from "./utils";
 
 
@@ -165,7 +169,7 @@ export class NodeFactory extends AudioContext {
                 .map((gainId) => this.nodeStore[gainId]);
 	}
 	
-	getOscNodes(): AudioStoreNode[] {
+	getOscNodes(): string[] {
 		return [...Object.keys(this.nodeStore)]
                 .filter((key) => key.indexOf("Oscillator") >= 0 || key.indexOf("AudioBuffer") >= 0);
 	}
@@ -219,7 +223,7 @@ export class NodeFactory extends AudioContext {
 	
 	// methods for node creation. I'm thinking of them as 'private' methods because
 	// they'll be used in other methods that are more useful and should be called on a NodeFactory instance
-	_createWaveNode(){
+	_createWaveNode(): ExtendedOscillatorNode {
 		// REMEMBER THAT OSCILLATOR NODES CAN ONLY BE STARTED/STOPPED ONCE!
 		// when a note is played multiple times, each time a new oscillator needs to 
 		// be created. but we can save the properties of the oscillator and reuse that data.
@@ -237,15 +241,15 @@ export class NodeFactory extends AudioContext {
 	}
 	
 	// audio buffer source node
-	_createNoiseNode(){
+	_createNoiseNode(): ExtendedAudioBufferSourceNode {
 		// allow user to pass in the contents of the noise buffer as a list if they want to?
-		let noise = this.createBufferSource();
+		const noise = this.createBufferSource();
 		
 		// assign random noise first, but let it be customizable
-		let bufSize = this.sampleRate; // customizable?
-		let buffer = this.createBuffer(1, bufSize, bufSize);
+		const bufSize = this.sampleRate; // customizable?
+		const buffer = this.createBuffer(1, bufSize, bufSize);
 		
-		let output = buffer.getChannelData(0);
+		const output = buffer.getChannelData(0);
 		for(let i = 0; i < bufSize; i++){
 			output[i] = Math.random() * 2 - 1;
 		}
@@ -258,8 +262,8 @@ export class NodeFactory extends AudioContext {
 		return noise;
 	}
 	
-	_createGainNode(){
-		let gainNode = this.createGain();
+	_createGainNode(): ExtendedGainNode {
+		const gainNode = this.createGain();
 		
 		// gain will always need to attach to analyser node (which is connected to destination)
 		gainNode.connect(this.analyserNode);
@@ -273,7 +277,7 @@ export class NodeFactory extends AudioContext {
 	}
 	
 	// create a biquadfilter node
-	_createBiquadFilterNode(){
+	_createBiquadFilterNode(): ExtendedBiquadFilterNode {
 		const bqFilterNode = this.createBiquadFilter();
 		
 		bqFilterNode.frequency.value = 440;
@@ -370,31 +374,41 @@ export class NodeFactory extends AudioContext {
 				uiElement.style.top = (y + 'px');
 				
 				if(nodeInfo.feedsInto){
-					nodeInfo.feedsInto.forEach((connection) => {
+					nodeInfo.feedsInto.forEach((connection: string) => {
 						const svg = document.getElementById("svgCanvas:" + uiElement.id + ":" + connection);
-						document.getElementById("nodeArea").removeChild(svg);
-						if(uiElement.id.indexOf("ADSR") >= 0){
-							drawLineBetween(uiElement, document.getElementById(connection), true);
-						}else{
-							drawLineBetween(uiElement, document.getElementById(connection));
+                        if(svg !== null){
+                            document.getElementById("nodeArea").removeChild(svg);
 						}
+                        const connect = document.getElementById(connection);
+                        if(connect !== null){
+                            if(uiElement.id.indexOf("ADSR") >= 0){
+                                drawLineBetween(uiElement, connect, true);
+                            }else{
+                                drawLineBetween(uiElement, connect);
+                            }
+                        }
 					});
 				}
 				
 				if(nodeInfo.feedsFrom){
-					nodeInfo.feedsFrom.forEach((connection) => {
+					nodeInfo.feedsFrom.forEach((connection: string) => {
 						const svg = document.getElementById("svgCanvas:" + connection + ":" + uiElement.id);
-						document.getElementById("nodeArea").removeChild(svg);
-						if(connection.indexOf("ADSR") >= 0){
-							drawLineBetween(document.getElementById(connection), uiElement, true);
-						}else{
-							drawLineBetween(document.getElementById(connection), uiElement);
+                        if(svg !== null){
+                            document.getElementById("nodeArea").removeChild(svg);
 						}
+                        const connect: HTMLElement = document.getElementById(connection);
+                        if(connect !== null){
+                            if(connection.indexOf("ADSR") >= 0){
+                                drawLineBetween(connect, uiElement, true);
+                            }else{
+                                drawLineBetween(connect, uiElement);
+                            }
+                        }
 					});
 				}
 			}
 	
-			function moveNode(evt){
+			function moveNode(evt: MouseEvent){
 				evt.stopPropagation();
 				if(!evt.target.classList.contains("nodeElement")){
 					return;
@@ -494,11 +508,13 @@ export class NodeFactory extends AudioContext {
 				[...Object.keys(nodeStore)].forEach((node) => {
 					if(node !== source.id){
 						const otherNode = document.getElementById(node);
-						otherNode.removeEventListener("mouseover", mouseoverNode);
-						otherNode.removeEventListener("mouseleave", mouseleaveNode);
-						otherNode.removeEventListener("click", selectNodeToConnectTo);
-						otherNode.style.backgroundColor = "#fff";
-					}
+                        if(otherNode !== null){
+                            otherNode.removeEventListener("mouseover", mouseoverNode);
+                            otherNode.removeEventListener("mouseleave", mouseleaveNode);
+                            otherNode.removeEventListener("click", selectNodeToConnectTo);
+                            otherNode.style.backgroundColor = "#fff";
+                        }
+                    }
 				});
 				document.body.removeEventListener("contextmenu", cancelConnection);
 			}
@@ -512,11 +528,13 @@ export class NodeFactory extends AudioContext {
 			// add an event listener for all node elements that this node could connect with 
 			[...Object.keys(nodeStore)].forEach((node) => {
 				if(node !== uiElement.id){			
-					const otherNode = document.getElementById(node)!;
-					otherNode.addEventListener("mouseover", mouseoverNode);
-					otherNode.addEventListener("mouseleave", mouseleaveNode);
-					otherNode.addEventListener("click", selectNodeToConnectTo);
-				}
+					const otherNode = document.getElementById(node);
+                    if(otherNode !== null){
+                        otherNode.addEventListener("mouseover", mouseoverNode);
+                        otherNode.addEventListener("mouseleave", mouseleaveNode);
+                        otherNode.addEventListener("click", selectNodeToConnectTo);
+                    }
+                }
 			})
 		});
 		uiElement.appendChild(connectButton);
