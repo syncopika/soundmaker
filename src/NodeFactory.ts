@@ -1,21 +1,12 @@
 import { ADSREnvelope } from "./ADSREnvelope";
-
-interface ExtendedAudioNode extends AudioNode {
-	id: string;
-};
-
-export type AudioStoreNode = {
-    'node': ExtendedAudioNode, 
-    'feedsInto': ExtendedAudioNode[],
-    'feedsFrom': ExtendedAudioNode[]
-};
-
-// https://stackoverflow.com/questions/57264080/typescript-array-of-specific-string-values
-export type NodeTypes = "waveNode" |
-                 "biquadFilterNode" |
-                 "noiseNode" |
-                 "gainNode" |
-                 "ADSREnvelope";
+import {
+    ExtendedAudioNode,
+    AudioStoreNode,
+    NodeTypes,
+} from "./types";
+import {
+    drawLineBetween
+} from "./utils";
 
 
 export class NodeFactory extends AudioContext {
@@ -521,7 +512,7 @@ export class NodeFactory extends AudioContext {
 			// add an event listener for all node elements that this node could connect with 
 			[...Object.keys(nodeStore)].forEach((node) => {
 				if(node !== uiElement.id){			
-					const otherNode = document.getElementById(node);
+					const otherNode = document.getElementById(node)!;
 					otherNode.addEventListener("mouseover", mouseoverNode);
 					otherNode.addEventListener("mouseleave", mouseleaveNode);
 					otherNode.addEventListener("click", selectNodeToConnectTo);

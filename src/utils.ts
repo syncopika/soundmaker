@@ -1,12 +1,11 @@
 import { NodeFactory } from "./NodeFactory";
 
-
 /***
 
 	ui stuff
 
 ***/
-function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, dash=false){
+export function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, dash=false){
 	// instead, we should create an individual svg per line
 	let svg = document.getElementById("svgCanvas");
 	
@@ -53,7 +52,7 @@ function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, d
 	}
 }
 
-function showParameterEditWindow(nodeInfo: AudioStoreNode, valueRanges){
+export function showParameterEditWindow(nodeInfo: AudioStoreNode, valueRanges){
 	const editWindow = document.getElementById("editNode");
 	if(editWindow === null) return;
 	
@@ -218,7 +217,7 @@ function showParameterEditWindow(nodeInfo: AudioStoreNode, valueRanges){
 ***/
 
 // import preset 
-function importPreset(nodeFactory: NodeFactory){
+export function importPreset(nodeFactory: NodeFactory){
 	const input = document.getElementById('importInstrumentPresetInput');
 	if(input !== null){
 		input.addEventListener('change', importInstrumentPreset(nodeFactory), false);
@@ -226,7 +225,7 @@ function importPreset(nodeFactory: NodeFactory){
 	}
 }
 
-function processPresetImport(data, nodeFactory: NodeFactory){
+export function processPresetImport(data, nodeFactory: NodeFactory){
 	// clear out current nodes
 	nodeFactory.reset();
 	
@@ -319,7 +318,7 @@ function processPresetImport(data, nodeFactory: NodeFactory){
 	}	
 }
 
-function importInstrumentPreset(nodeFactory: NodeFactory){
+export function importInstrumentPreset(nodeFactory: NodeFactory){
 	return (function(nf){
 		return function(evt){
 			let reader = new FileReader();
@@ -337,7 +336,7 @@ function importInstrumentPreset(nodeFactory: NodeFactory){
 	})(nodeFactory);
 }
 
-function exportPreset(nodeFactory: NodeFactory){
+export function exportPreset(nodeFactory: NodeFactory){
 	const fileName = prompt("enter filename");
 	if(fileName === null || fileName === ""){
 		return;
@@ -402,7 +401,7 @@ function exportPreset(nodeFactory: NodeFactory){
 	link.click();
 }
 
-function loadDemoPreset(presetName: string, nodeFactory: NodeFactory){
+export function loadDemoPreset(presetName: string, nodeFactory: NodeFactory){
 	fetch("demo-presets/" + presetName + ".json")
 		.then(response => response.json())
 		.then(data => {

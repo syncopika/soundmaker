@@ -1,4 +1,9 @@
 import { NodeFactory, AudioStoreNode } from "./NodeFactory";
+import {
+    exportPreset,
+    importPreset,
+    loadDemoPreset
+} from "./utils";
 
 const NOTE_FREQ: Record<string, number> = {
 	"C8": 4186.01,
@@ -127,7 +132,7 @@ class SoundMaker {
 	}
 }
 
-function processNote(noteFreq: number, nodeFactory: NodeFactory){
+function processNote(noteFreq: number, nodeFactory: NodeFactory): AudioNode[] {
 	// this is used to create and use new nodes each time a note needs to be played
 	const nodeStore = nodeFactory.nodeStore;
 
@@ -135,13 +140,13 @@ function processNote(noteFreq: number, nodeFactory: NodeFactory){
 	// i.e. OscillatorNodes, AudioBufferSourceNodes
 	const oscNodes = nodeFactory.getOscNodes();
 	
-	const nodesToStart = [];
+	const nodesToStart : AudioNode[] = [];
 	oscNodes.forEach((osc) => {
 		// create a new osc node from the template props
 		const oscTemplateNode = nodeStore[osc].node;
 		const templateProps = {};
 		
-		Object.keys(oscTemplateNode.__proto__).forEach((propName) => {
+		Object.keys(Object.getPrototypeOf(oscTemplateNode)).forEach((propName) => {
 			const prop = oscTemplateNode[propName];
 			templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
 			
@@ -150,6 +155,7 @@ function processNote(noteFreq: number, nodeFactory: NodeFactory){
 			}
 		});
 		
+        // the audio node constructors are accessible via the window object
 		const newOsc = new window[oscTemplateNode.constructor.name](nodeFactory, templateProps);
 		nodesToStart.push(newOsc);
 		
@@ -157,25 +163,24 @@ function processNote(noteFreq: number, nodeFactory: NodeFactory){
 		// gain nodes don't need to be touched as they're already attached to the context dest by default
 		const connections = nodeStore[osc].feedsInto;
 		connections.forEach((conn) => {
-			// connect the new osc node to this connection 
+			// connect the new osc node to this node which will act as a sink (the new osc -> this node)
 			const sinkNode = nodeStore[conn].node;
 			
-			// make connection
 			newOsc.connect(sinkNode);
 			
-			// if source is a gain node, no need to go further
+			// if sink is a gain node, no need to go further
 			if(sinkNode.id.indexOf("Gain") < 0){
 				let stack = nodeStore[sinkNode.id]["feedsInto"];
 				let newSource = sinkNode;
 				
 				while(stack.length > 0){
-					let next = stack.pop();
-					let currSink = nodeStore[next].node;
+					const next = stack.pop();
+					const currSink = nodeStore[next].node;
 					console.log("connecting: " + newSource.constructor.name + " to: " + currSink.constructor.name);
 					
 					newSource.connect(currSink);
 					newSource = currSink;
-					nextConnections = nodeStore[next]["feedsInto"].filter((name) => name.indexOf("Destination") < 0);
+					const nextConnections = nodeStore[next]["feedsInto"].filter((name: string) => name.indexOf("Destination") < 0);
 					stack = stack.concat(nextConnections);
 				}
 			}
@@ -202,7 +207,7 @@ function processNote(noteFreq: number, nodeFactory: NodeFactory){
 	return nodesToStart;
 }
 
-function getADSRFeed(sinkNode: AudioStoreNode): string | undefined {
+function getADSRFeed(sinkNode: AudioStoreNode): string | null {
 	// check if sinkNode has an ADSR envelope
 	const feedsFrom = sinkNode.feedsFrom;
 	for(let i = 0; i < feedsFrom.length; i++){
@@ -214,69 +219,74 @@ function getADSRFeed(sinkNode: AudioStoreNode): string | undefined {
 	return null;
 }
 
+function setupButtons(){
+    document.getElementById('addWavNode')!.addEventListener('click', (evt: MouseEvent) => {
+        soundMaker.nodeFactory.addNewNode("waveNode");
+    });
+
+    document.getElementById('addGainNode')!.addEventListener('click', (evt: MouseEvent) => {
+        soundMaker.nodeFactory.addNewNode("gainNode");
+    });
+
+    document.getElementById('addNoiseNode')!.addEventListener('click', (evt: MouseEvent) => {
+        soundMaker.nodeFactory.addNewNode("noiseNode");
+    });
+
+    document.getElementById('addFilterNode')!.addEventListener('click', (evt: MouseEvent) => {
+        soundMaker.nodeFactory.addNewNode("biquadFilterNode");
+    });
+
+    document.getElementById('addADSRNode')!.addEventListener('click', (evt: MouseEvent) => {
+        soundMaker.nodeFactory.addNewNode("ADSREnvelope");
+    });
+
+    document.getElementById('download')!.addEventListener('click', (evt: MouseEvent) => {
+        exportPreset(soundMaker.nodeFactory);
+    });
+
+    document.getElementById('import')!.addEventListener('click', (evt: MouseEvent) => {
+        importPreset(soundMaker.nodeFactory);
+    });
+
+    document.getElementById('demos')!.addEventListener('change', (evt: Event) => {
+        const selectElement = <HTMLSelectElement>evt.target;
+        const presetName = selectElement.options[selectElement.selectedIndex].value;
+        if(presetName !== ""){
+            loadDemoPreset(presetName, soundMaker.nodeFactory);
+        }
+    });
+
+    document.getElementById('toggleViz')!.addEventListener('click', (evt: MouseEvent) => {
+        //const style = window.getComputedStyle(e.target);
+        //console.log(style.getPropertyValue('border'));
+        const borderStyle = (<HTMLElement>evt.target).style.border;
+        if(!borderStyle || borderStyle === '3px solid rgb(0, 204, 0)'){
+            (<HTMLElement>evt.target).style.border = '3px solid rgb(204, 0, 0)';
+            (<HTMLElement>evt.target).textContent = 'off';
+            
+            // stop visualization
+            window.cancelAnimationFrame(doVisualization);
+            
+            // clear canvas
+            canvasCtx!.clearRect(0, 0, canvas.width, canvas.height);
+        }else{
+            (<HTMLElement>evt.target).style.border = '3px solid rgb(0, 204, 0)';
+            (<HTMLElement>evt.target).textContent = 'on';
+            
+            // start visualization
+            doVisualization = requestAnimationFrame(runViz);
+        }
+    });
+}
+
+
 
 ////////////////////////// SET UP
 const soundMaker = new SoundMaker();
 const notes = [...document.getElementsByClassName("note")];
 let currPlayingNodes : OscillatorNode[] = [];
 
-document.getElementById('addWavNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("waveNode");
-});
-
-document.getElementById('addGainNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("gainNode");
-});
-
-document.getElementById('addNoiseNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("noiseNode");
-});
-
-document.getElementById('addFilterNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("biquadFilterNode");
-});
-
-document.getElementById('addADSRNode').addEventListener('click', (e) => {
-	soundMaker.nodeFactory.addNewNode("ADSREnvelope");
-});
-
-document.getElementById('download').addEventListener('click', (e) => {
-	exportPreset(soundMaker.nodeFactory);
-});
-
-document.getElementById('import').addEventListener('click', (e) => {
-	importPreset(soundMaker.nodeFactory);
-});
-
-document.getElementById('demos').addEventListener('change', (e) => {
-	const presetName = e.target.options[e.target.selectedIndex].value;
-	if(presetName !== ""){
-		loadDemoPreset(presetName, soundMaker.nodeFactory);
-	}
-});
-
-document.getElementById('toggleViz').addEventListener('click', (evt) => {
-	//const style = window.getComputedStyle(e.target);
-	//console.log(style.getPropertyValue('border'));
-	const borderStyle = (<HTMLElement>evt.target).style.border;
-	if(!borderStyle || borderStyle === '3px solid rgb(0, 204, 0)'){
-		(<HTMLElement>evt.target).style.border = '3px solid rgb(204, 0, 0)';
-		(<HTMLElement>evt.target).textContent = 'off';
-		
-		// stop visualization
-		window.cancelAnimationFrame(doVisualization);
-		
-		// clear canvas
-		canvasCtx!.clearRect(0, 0, canvas.width, canvas.height);
-	}else{
-		(<HTMLElement>evt.target).style.border = '3px solid rgb(0, 204, 0)';
-		(<HTMLElement>evt.target).textContent = 'on';
-		
-		// start visualization
-		doVisualization = requestAnimationFrame(runViz);
-	}
-});
-
+setupButtons();
 soundMaker.nodeFactory.createAudioContextDestinationUI();
 
 
@@ -284,10 +294,12 @@ soundMaker.nodeFactory.createAudioContextDestinationUI();
 function setupKeyboard(notes: SVGElement[], nodeFactory: NodeFactory){
 	const audioContext = nodeFactory;
 	
-	function stopPlay(evt){
-		evt.target.style.stroke = "#000000";
-		evt.target.style.strokeWidth = "0.264583px";
-		
+	function stopPlay(evt: MouseEvent){
+		if(evt.target){
+            (<HTMLElement>evt.target).style.stroke = "#000000";
+            (<HTMLElement>evt.target).style.strokeWidth = "0.264583px";
+		}
+        
 		let maxEndTime = audioContext.currentTime;
 		
 		// apply adsr release, if any
