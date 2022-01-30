@@ -1,7 +1,7 @@
 import { ADSREnvelope } from "./ADSREnvelope";
 
 /* export interface ExtendedAudioNode extends AudioNode {
-	id: string;
+    id: string;
 }; */
 
 export interface ExtendedAudioParam extends AudioParam {
@@ -10,6 +10,14 @@ export interface ExtendedAudioParam extends AudioParam {
 
 export interface ExtendedAudioBufferSourceNode extends AudioBufferSourceNode {
     id: string;
+};
+
+export interface AudioBufferParameters {
+    duration: number;
+    length: number;
+    numberOfChannels: number;
+    sampleRate: number;
+    channelData: Float32Array;
 };
 
 export interface ExtendedOscillatorNode extends OscillatorNode {

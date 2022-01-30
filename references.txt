@@ -26,3 +26,7 @@ https://www.typescriptlang.org/docs/handbook/tsconfig-json.html -> super annoyin
 https://stackoverflow.com/questions/52304422/property-values-does-not-exist-on-type-objectconstructor
 https://github.com/DefinitelyTyped/DefinitelyTyped/issues/41301 -> no AudioContext type error
 https://stackoverflow.com/questions/57086672/element-implicitly-has-an-any-type-because-expression-of-type-string-cant-b -> 'as keyof' is helpful (see ADSREnvelope)
+https://stackoverflow.com/questions/41285211/overriding-interface-property-type-defined-in-typescript-d-ts-file
+https://stackoverflow.com/questions/35789498/new-typescript-1-8-4-build-error-build-property-result-does-not-exist-on-t?rq=1
+https://stackoverflow.com/questions/53536897/type-string-is-not-assignable-to-type-arraybuffer-arraylikenumber-share
+https://stackoverflow.com/questions/41038812/declare-dynamically-added-class-properties-in-typescript -> e.g. working with my ExtendedAudioBufferSourceNode
