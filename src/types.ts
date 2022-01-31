@@ -33,9 +33,9 @@ export interface ExtendedBiquadFilterNode extends BiquadFilterNode {
 };
 
 export interface AudioStoreNode {
-    'node': any, // TODO: don't use any?
-    'feedsInto': string[],
-    'feedsFrom': string[]
+    'node': any; // TODO: don't use any?
+    'feedsInto': string[];
+    'feedsFrom': string[];
 };
 
 // https://stackoverflow.com/questions/57264080/typescript-array-of-specific-string-values

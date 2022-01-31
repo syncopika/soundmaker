@@ -11,6 +11,14 @@ import {
 
 ***/
 export function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, dash=false){
+    
+    const svgLine = document.getElementById("svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id);
+    if(svgLine){
+        // not sure why yet that duplicate line svgs are being created but they are and this should
+        // prevent that
+        return;
+    }
+    
     // instead, we should create an individual svg per line
     let svg = document.getElementById("svgCanvas");
     
@@ -240,6 +248,12 @@ function processPresetImport(data: any, nodeFactory: NodeFactory){
     // clear out current nodes
     nodeFactory.reset();
     
+    // remove all svg lines
+    const svgLines = document.querySelectorAll('line');
+    if(svgLines){
+        svgLines.forEach(el => el.parentNode!.removeChild(el));
+    }
+    
     // add new nodes
     for(let nodeId in data){
         if(nodeId.indexOf("Gain") > -1){
@@ -417,7 +431,6 @@ export function loadDemoPreset(presetName: string, nodeFactory: NodeFactory){
     fetch("demo-presets/" + presetName + ".json")
         .then(response => response.json())
         .then(data => {
-            let theData = data.data;
-            processPresetImport(theData, nodeFactory);
+            processPresetImport(data.data, nodeFactory);
         });
 }

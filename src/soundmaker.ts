@@ -401,6 +401,7 @@ function runViz(){
 
 
 ///////// TESTS
+// TODO: move to separate file
 function Test1(){
     let sm = new SoundMaker();
     console.log(sm.nodeFactory !== undefined);
