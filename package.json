@@ -4,7 +4,8 @@
   "description": "check it out @ https://syncopika.github.io/soundmaker/",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "check": "tsc",
+    "build": "node esbuild.config.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,5 +20,9 @@
   "homepage": "https://github.com/syncopika/soundmaker#readme",
   "devDependencies": {
     "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "esbuild": "^0.14.14",
+    "esbuild-node-externals": "^1.4.1"
   }
 }

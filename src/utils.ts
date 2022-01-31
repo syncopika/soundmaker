@@ -15,7 +15,7 @@ export function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLEle
     let svg = document.getElementById("svgCanvas");
     
     if(svg === null){
-        // TODO: please solve TS2740
+        // TODO: solve TS2740?
         // @ts-ignore
         svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg!.style.position = "absolute";
@@ -275,7 +275,7 @@ function processPresetImport(data: any, nodeFactory: NodeFactory){
                     delete params["buffer"]['duration']; // duration param not supported for constructor apparently
                     
                     const buffer = new AudioBuffer(params["buffer"]);
-                    buffer.copyToChannel(bufferData, 0); // only one channel. does this need to be changed?
+                    buffer.copyToChannel(bufferData, 0); // only one channel. TODO: does this need to be changed?
                     params["buffer"] = buffer;
                 }
                 

@@ -225,12 +225,20 @@ export class NodeFactory extends AudioContext {
         ExtendedBiquadFilterNode |
         ExtendedGainNode
     )){
+        // TODO: TS7053 - need to fix
+        for(const prop in node){
+            if(node[prop] && node[prop].value){
+                node[prop].baseValue = node[prop].value;
+            }
+        }
+        /*
         for(const [propName, value] of Object.entries(node)){
             const nodeProp = value;
             if(nodeProp.value){
+                console.log(nodeProp.value);
                 nodeProp.baseValue = nodeProp.value;
             }
-        }
+        }*/
     }
     
     // store a node in this.nodeStore
@@ -329,7 +337,7 @@ export class NodeFactory extends AudioContext {
     // for now we should keep this very simple! :)
     _createADSREnvelopeNode(): ADSREnvelope {
         const envelope = new ADSREnvelope();
-        envelope.id = envelope.constructor.name + this.nodeCounts.addNode(envelope);
+        envelope.id = "ADSREnvelope" + this.nodeCounts.addNode(envelope);
         return envelope;
     }
     

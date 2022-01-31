@@ -34,3 +34,5 @@ https://effectivetypescript.com/2020/05/26/iterate-objects/ -> very important fo
 https://stackoverflow.com/questions/50234481/typescript-2-8-3-type-must-have-a-symbol-iterator-method-that-returns-an-iterato -> solves TS2488
 https://stackoverflow.com/questions/41017287/cannot-use-new-with-expression-typescript/41017528
 https://stackoverflow.com/questions/43042889/typescript-referenceerror-exports-is-not-defined -> thought it would be enough to cconvert my .ts to .js and then just use the .js files as-is but that's not the case :<
+https://stackoverflow.com/questions/13613524/get-an-objects-class-name-at-runtime -> oof, I was using constructor.name and I minified my bundle...
+https://jamesthom.as/2021/05/setting-up-esbuild-for-typescript-libraries/
