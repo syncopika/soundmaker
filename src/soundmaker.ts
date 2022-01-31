@@ -146,8 +146,9 @@ function processNote(noteFreq: number, nodeFactory: NodeFactory): OscillatorNode
     oscNodes.forEach((osc) => {
         // create a new osc node from the template props
         const oscTemplateNode = nodeStore[osc].node;
-        const templateProps = {};
+        const templateProps: Record<string, any> = {};
         
+        // TODO: do we really need to extract values for AudioParams like this?
         Object.keys(Object.getPrototypeOf(oscTemplateNode)).forEach((propName) => {
             const prop = oscTemplateNode[propName];
             templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
@@ -158,7 +159,8 @@ function processNote(noteFreq: number, nodeFactory: NodeFactory): OscillatorNode
         });
         
         // the audio node constructors are accessible via the window object
-        const newOsc = new window[oscTemplateNode.constructor.name](nodeFactory, templateProps);
+        // TODO: try solving TS2351? (don't cast window as any)
+        const newOsc = new ((window as any)[oscTemplateNode.constructor.name])(nodeFactory, templateProps);
         nodesToStart.push(newOsc);
         
         // need to go down all the way to each node and make connections
@@ -283,9 +285,9 @@ function setupButtons(){
 
 
 
-////////////////////////// SET UP
+//////////////// SET UP  ///////////////////
 const soundMaker = new SoundMaker();
-const notes = [...document.getElementsByClassName("note")];
+const notes = [...document.getElementsByClassName("note")] as SVGElement[];
 let currPlayingNodes : OscillatorNode[] = [];
 
 setupButtons();

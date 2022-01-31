@@ -7,7 +7,7 @@ import {
 
 /***
 
-    ui stuff
+    UI stuff
 
 ***/
 export function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLElement, dash=false){
@@ -15,6 +15,8 @@ export function drawLineBetween(htmlElement1: HTMLElement, htmlElement2: HTMLEle
     let svg = document.getElementById("svgCanvas");
     
     if(svg === null){
+        // TODO: please solve TS2740
+        // @ts-ignore
         svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg!.style.position = "absolute";
         svg!.id = "svgCanvas:" + htmlElement1.id + ":" + htmlElement2.id;
@@ -234,7 +236,7 @@ export function importPreset(nodeFactory: NodeFactory){
 }
 
 // TODO: make an interface for data parameter?
-export function processPresetImport(data: any, nodeFactory: NodeFactory){
+function processPresetImport(data: any, nodeFactory: NodeFactory){
     // clear out current nodes
     nodeFactory.reset();
     
@@ -327,7 +329,7 @@ export function processPresetImport(data: any, nodeFactory: NodeFactory){
     }    
 }
 
-export function importInstrumentPreset(nodeFactory: NodeFactory){
+function importInstrumentPreset(nodeFactory: NodeFactory){
     return (function(nf){
         return function(evt: Event){
             const reader = new FileReader();

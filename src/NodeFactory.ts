@@ -4,6 +4,7 @@ import {
     ExtendedAudioBufferSourceNode,
     ExtendedBiquadFilterNode,
     ExtendedGainNode,
+    ExtendedAudioParam,
     AudioStoreNode,
     NodeTypes,
 } from "./types";
@@ -208,9 +209,12 @@ export class NodeFactory extends AudioContext {
     
     // delete all nodes
     reset(){
-        for(let nodeId in this.nodeStore){
-            if(nodeId !== "AudioDestinationNode"){
-                this._deleteNode(this.nodeStore[nodeId].node);
+        const nodeArea = document.getElementById("nodeArea");
+        if(nodeArea){
+            for(let nodeId in this.nodeStore){
+                if(nodeId !== "AudioDestinationNode"){
+                    this._deleteNode(this.nodeStore[nodeId].node, nodeArea);
+                }
             }
         }
     }
@@ -221,9 +225,10 @@ export class NodeFactory extends AudioContext {
         ExtendedBiquadFilterNode |
         ExtendedGainNode
     )){
-        for(let property in node){
-            if(node[property] && node[property].value){
-                node[property].baseValue = node[property].value;
+        for(const [propName, value] of Object.entries(node)){
+            const nodeProp = value;
+            if(nodeProp.value){
+                nodeProp.baseValue = nodeProp.value;
             }
         }
     }
@@ -334,7 +339,7 @@ export class NodeFactory extends AudioContext {
         ExtendedGainNode | 
         ExtendedBiquadFilterNode | 
         ADSREnvelope
-    )){
+    ), nodeArea: HTMLElement){
         const nodeName = node.id;
         const nodeToDelete = this.nodeStore[nodeName].node;
         
@@ -347,7 +352,9 @@ export class NodeFactory extends AudioContext {
             connectionsTo.forEach((connection) => {
                 // remove the UI representation of the connection
                 const svg = document.getElementById("svgCanvas:" + nodeName + ":" + connection);
-                document.getElementById("nodeArea").removeChild(svg);
+                if(svg){
+                    nodeArea.removeChild(svg);
+                }
                 
                 // also remove the reference of the node being deleted from this connected node's feedsFrom
                 const targetFeedsFrom = this.nodeStore[connection].feedsFrom;
@@ -359,7 +366,9 @@ export class NodeFactory extends AudioContext {
         if(connectionsFrom){
             connectionsFrom.forEach((connection) => {
                 const svg = document.getElementById("svgCanvas:" + connection + ":" + nodeName);
-                document.getElementById("nodeArea").removeChild(svg);
+                if(svg){
+                    nodeArea.removeChild(svg);
+                }
                 
                 // also remove the reference of the node being deleted from this connected node's feedsInto
                 const targetFeedsInto = this.nodeStore[connection].feedsInto;
@@ -371,15 +380,28 @@ export class NodeFactory extends AudioContext {
         delete this.nodeStore[nodeName];
         
         // clear UI
-        document.getElementById('nodeArea').removeChild(document.getElementById(nodeName));
+        const nodeElement = document.getElementById(nodeName);
+        if(nodeElement){
+            nodeArea.removeChild(nodeElement);
+        }
     }
     
-    _addNodeToInterface(node, x='100px', y='100px'){
+    _addNodeToInterface(node: (
+            ExtendedAudioBufferSourceNode |
+            ExtendedOscillatorNode |
+            ExtendedGainNode |
+            ExtendedBiquadFilterNode |
+            ADSREnvelope
+        ),
+        nodeArea: HTMLElement,
+        x='100px', 
+        y='100px'
+    ){
         // place randomly in designated area?
         const uiElement = this._createNodeUIElement(node);
         uiElement.style.top = x;
         uiElement.style.left = y;
-        document.getElementById('nodeArea').appendChild(uiElement);
+        nodeArea.appendChild(uiElement);
     }
     
     _createNodeUIElement(node: (
@@ -456,12 +478,12 @@ export class NodeFactory extends AudioContext {
             
             document.addEventListener("mousemove", moveNode);
             
-            uiElement.addEventListener("mouseup", (evt) => {
+            uiElement.addEventListener("mouseup", (evt: MouseEvent) => {
                 document.removeEventListener("mousemove", moveNode);
             });
         });
         
-        uiElement.addEventListener('dblclick', (evt) => {
+        uiElement.addEventListener('dblclick', (evt: MouseEvent) => {
             // display menu for this node to edit params 
             showParameterEditWindow(nodeInfo, this.valueRanges);
         });
@@ -475,14 +497,18 @@ export class NodeFactory extends AudioContext {
         const connectButton = document.createElement('button');
         connectButton.textContent = "connect to another node";
         connectButton.addEventListener("click", (evt) => {
-            function selectNodeToConnectHelper(evt: MouseEvent, source, nodeStore: Record<string, AudioStoreNode>){
+            function selectNodeToConnectHelper(
+                evt: MouseEvent, 
+                source: HTMLElement,
+                nodeStore: Record<string, AudioStoreNode>
+            ){
                 let target = <HTMLElement>evt.target;
-                if(!evt.target.classList.contains("nodeElement")){
-                    target = evt.target.parentNode;
+                if(target && !target.classList.contains("nodeElement") && target.parentNode){
+                    target = target.parentNode as HTMLElement;
                 }
                 
                 // if the target is still not a node element, return
-                if(!target.classList.contains("nodeElement")){
+                if(target && !target.classList.contains("nodeElement")){
                     return; 
                 }
                 
@@ -545,8 +571,8 @@ export class NodeFactory extends AudioContext {
             
             function cancelConnectionHelper(
                 evt: Event, 
-                source, 
-                nodeStore
+                source: HTMLElement, 
+                nodeStore: Record<string, AudioStoreNode>
             ){
                 evt.preventDefault();
                 [...Object.keys(nodeStore)].forEach((node) => {
@@ -588,7 +614,10 @@ export class NodeFactory extends AudioContext {
         const deleteButton = document.createElement('button');
         deleteButton.textContent = "delete";
         deleteButton.addEventListener('click', (evt) => {
-            this._deleteNode(node);
+            const nodeArea = document.getElementById("nodeArea");
+            if(nodeArea){
+                this._deleteNode(node, nodeArea);
+            }
         });
         
         uiElement.appendChild(deleteButton);
@@ -619,15 +648,21 @@ export class NodeFactory extends AudioContext {
         // store it 
         this._storeNode(newNode, newNode.id);
         
-        // this should be a separate function
-        if(addToInterface) this._addNodeToInterface(newNode);
+        // TODO: this should be a separate function?
+        const nodeArea = document.getElementById('nodeArea');
+        if(addToInterface && nodeArea) this._addNodeToInterface(newNode, nodeArea);
         
         if(nodeType === "gainNode"){
             // gain node is special :)
             const audioCtx = this.destination.constructor.name;
             this.nodeStore[newNode.id]["feedsInto"] = [audioCtx];
             this.nodeStore[audioCtx]["feedsFrom"].push(newNode.id);
-            drawLineBetween(document.getElementById(newNode.id), document.getElementById(audioCtx)); // order matters! :0
+            
+            const src = document.getElementById(newNode.id);
+            const dest = document.getElementById(audioCtx);
+            if(src && dest){
+                drawLineBetween(src, dest); // order matters! :0
+            }
         }
     }
     

@@ -1,9 +1,5 @@
 import { ADSREnvelope } from "./ADSREnvelope";
 
-/* export interface ExtendedAudioNode extends AudioNode {
-    id: string;
-}; */
-
 export interface ExtendedAudioParam extends AudioParam {
     baseValue: number;
 }
@@ -12,6 +8,8 @@ export interface ExtendedAudioBufferSourceNode extends AudioBufferSourceNode {
     id: string;
 };
 
+// added a custom property called channelData
+// so we can export more easily
 export interface AudioBufferParameters {
     duration: number;
     length: number;
@@ -35,7 +33,7 @@ export interface ExtendedBiquadFilterNode extends BiquadFilterNode {
 };
 
 export interface AudioStoreNode {
-    'node': any,
+    'node': any, // TODO: don't use any?
     'feedsInto': string[],
     'feedsFrom': string[]
 };

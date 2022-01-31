@@ -30,3 +30,7 @@ https://stackoverflow.com/questions/41285211/overriding-interface-property-type-
 https://stackoverflow.com/questions/35789498/new-typescript-1-8-4-build-error-build-property-result-does-not-exist-on-t?rq=1
 https://stackoverflow.com/questions/53536897/type-string-is-not-assignable-to-type-arraybuffer-arraylikenumber-share
 https://stackoverflow.com/questions/41038812/declare-dynamically-added-class-properties-in-typescript -> e.g. working with my ExtendedAudioBufferSourceNode
+https://effectivetypescript.com/2020/05/26/iterate-objects/ -> very important for cycling through properties in an object in typescript
+https://stackoverflow.com/questions/50234481/typescript-2-8-3-type-must-have-a-symbol-iterator-method-that-returns-an-iterato -> solves TS2488
+https://stackoverflow.com/questions/41017287/cannot-use-new-with-expression-typescript/41017528
+https://stackoverflow.com/questions/43042889/typescript-referenceerror-exports-is-not-defined -> thought it would be enough to cconvert my .ts to .js and then just use the .js files as-is but that's not the case :<
