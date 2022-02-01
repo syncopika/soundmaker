@@ -1,0 +1,28 @@
+{
+  "name": "soundmaker",
+  "version": "1.0.0",
+  "description": "check it out @ https://syncopika.github.io/soundmaker/",
+  "main": "index.js",
+  "scripts": {
+    "check": "tsc",
+    "build": "node esbuild.config.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/syncopika/soundmaker.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/syncopika/soundmaker/issues"
+  },
+  "homepage": "https://github.com/syncopika/soundmaker#readme",
+  "devDependencies": {
+    "typescript": "^4.5.4"
+  },
+  "dependencies": {
+    "esbuild": "^0.14.14",
+    "esbuild-node-externals": "^1.4.1"
+  }
+}
