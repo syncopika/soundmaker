@@ -15,3 +15,5 @@ ADSREnvelope {attack: 0.54, sustain: 0, decay: 0.53, release: 0, sustainLevel: 
 	
 - there should be a distinction between connecting nodes and connecting to audio params. use a dotted line for params? also,
   arrows for the lines would be helpful.
+
+- release with ADSR can act kinda funny - after the release timespan sometimes the note would pick up again and blip a couple times.
