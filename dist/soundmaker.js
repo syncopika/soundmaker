@@ -1,2 +1,351 @@
-(()=>{var C=class{constructor(){this.attack=0,this.sustain=0,this.decay=0,this.release=0,this.sustainLevel=0,this.id=""}updateParams(e){for(let t in e)t in this&&(this[t]=e[t])}applyADSR(e,t){let n=e.baseValue,o=this.sustainLevel===0?1:this.sustainLevel;return e.cancelAndHoldAtTime(t),e.linearRampToValueAtTime(0,t),e.linearRampToValueAtTime(n,t+this.attack),e.linearRampToValueAtTime(n*o,t+this.attack+this.decay),e.linearRampToValueAtTime(n*o,t+this.attack+this.decay+this.sustain),e}};function x(i,e,t=!1){if(document.getElementById("svgCanvas:"+i.id+":"+e.id))return;let o=document.getElementById("svgCanvas");o===null&&(o=document.createElementNS("http://www.w3.org/2000/svg","svg"),o.style.position="absolute",o.id="svgCanvas:"+i.id+":"+e.id,o.style.zIndex="0",o.style.height="1000px",o.style.width="1000px",document.getElementById("nodeArea").appendChild(o));let d=document.createElementNS("http://www.w3.org/2000/svg","line");d!==null&&(d.classList.add("line"),d.setAttribute("stroke","#000"),d.setAttribute("stroke-width","1px")),t&&d.setAttribute("stroke-dasharray","10");let a=i.offsetLeft+document.body.scrollLeft+i.offsetWidth/2,s=i.offsetTop+document.body.scrollTop+i.offsetHeight/2,r=e.offsetLeft+document.body.scrollLeft+e.offsetWidth/2,p=e.offsetTop+document.body.scrollTop+e.offsetHeight/2;if(o!==null&&d!==null){d.setAttribute("x1",String(a)),d.setAttribute("y1",String(s)),d.setAttribute("x2",String(r)),d.setAttribute("y2",String(p));let l=Math.max(a,r)+200,h=Math.max(s,p)+200;o.style.height=parseInt(o.style.height)<h?h+"px":o.style.height,o.style.width=parseInt(o.style.width)<l?l+"px":o.style.width,o.appendChild(d)}}function D(i,e){let t=document.getElementById("editNode");if(t===null)return;for(t.style.display="block";t.firstChild;)t.removeChild(t.firstChild);let n=document.createElement("h3");n.textContent=i.node.id,t.appendChild(n);let o=i.node,d=Object.keys(Object.getPrototypeOf(i.node));d.length===0&&(d=Object.keys(i.node).filter(s=>typeof i.node[s]=="number")),d.forEach(s=>{let r=document.createElement("div");r.style.display="inline-block",r.style.marginRight="3%",r.style.marginLeft="3%";let p=document.createElement("p");r.appendChild(p);let l=s,h=!1;if(o[s].value!==void 0?(l+=".value",h=!0):typeof o[s]=="number"&&(h=!0),p.textContent=l,h){t.appendChild(r);let c=e[o.constructor.name]||e[o.type];c=c[s];let m=document.createElement("input");m.id=l,m.setAttribute("type","range"),m.setAttribute("max",c?c.max:.5),m.setAttribute("min",c?c.min:0),m.setAttribute("step",c?c.step:.01);let E=document.createElement("input");E.id=l+"-edit",E.setAttribute("size","6"),E.setAttribute("type","text"),o[s].value?m.setAttribute("value",o[s].baseValue):typeof o[s]=="number"?m.setAttribute("value",o[s]):m.setAttribute("value",c.default),E.value=m.getAttribute("value")||"",E.style.fontFamily="monospace",E.addEventListener("input",u=>{let f=parseFloat(u.target.value),g=m.getAttribute("min"),y=m.getAttribute("max");g&&y&&f>=parseFloat(g)&&f<=parseFloat(y)&&(m.setAttribute("value",f.toString()),o[s].value!==void 0?(o[s].value=f,o[s].baseValue=f):o[s]=f)}),m.addEventListener("input",function(u){let f=parseFloat(u.target.value);E.value=f.toString(),o[s].value!==void 0?(o[s].value=f,o[s].baseValue=f):o[s]=f}),r.appendChild(m),r.appendChild(E)}else if(s==="type"){t.appendChild(r);let c=document.createElement("select");c.id=l+"Type";let m=[];o.constructor.name.indexOf("Oscillator")>=0?m=e.waveType:m=e.filterType,m.forEach(E=>{let u=document.createElement("option");u.textContent=E,c.appendChild(u)}),c.addEventListener("change",E=>{let u=c.options[c.selectedIndex].value;i.node[s]=u}),c.value=o[s],r.appendChild(c)}});let a=document.createElement("p");a.style.margin="0 auto",a.style.marginTop="2%",a.style.width="3%",a.textContent="close",a.style.color="#ff0000",a.addEventListener("click",s=>{t.style.display="none"}),t.appendChild(a)}function O(i){let e=document.getElementById("importInstrumentPresetInput");e!==null&&(e.addEventListener("change",q(i),!1),e.click())}function k(i,e){e.reset();let t=document.querySelectorAll("line");t&&t.forEach(n=>n.parentNode.removeChild(n));for(let n in i)if(n.indexOf("Gain")>-1?e.addNewNode("gainNode"):n.indexOf("Oscillator")>-1?e.addNewNode("waveNode"):n.indexOf("ADSR")>-1?e.addNewNode("ADSREnvelope"):n.indexOf("AudioBuffer")>-1?e.addNewNode("noiseNode"):n.indexOf("BiquadFilter")>-1&&e.addNewNode("biquadFilterNode"),n!=="AudioDestinationNode"){let o=e.nodeStore[n];o.feedsInto=i[n].feedsInto,o.feedsFrom=i[n].feedsFrom;let d=i[n].node;if("buffer"in d){if(d.buffer.channelData){let s=new Float32Array([...Object.values(d.buffer.channelData)]);delete d.buffer.duration;let r=new AudioBuffer(d.buffer);r.copyToChannel(s,0),d.buffer=r}let a=new AudioBufferSourceNode(e,d);a.loop=!0,a.id=n,o.node=a}else for(let a in d)o.node[a].value!==void 0?(o.node[a].value=d[a],o.node[a].baseValue=d[a]):a in o.node&&(o.node[a]=d[a])}for(let n in i)e.nodeStore[n].feedsInto.forEach(d=>{let a=document.getElementById(n);if(a!==null){let s=parseInt(a.style.top)+80,r=parseInt(a.style.top)-80;a.style.top=Math.random()*(s-r)+r+"px";let p=parseInt(a.style.left)+80,l=parseInt(a.style.left)-80;a.style.left=Math.random()*(p-l)+l+"px";let h=document.getElementById(d);document.getElementById("svgCanvas:"+n+":"+d)!==null&&h!==null&&(n.indexOf("ADSR")>-1?x(a,h,!0):x(a,h,!1))}})}function q(i){return function(e){return function(t){let n=new FileReader,o=t.target.files[0];n.onload=function(d){return function(a){let s=JSON.parse(n.result);s.data&&k(s.data,e)}}(o),n.readAsText(o)}}(i)}function R(i){let e=prompt("enter filename");if(e===null||e==="")return;let t={},n=i.nodeStore;Object.keys(n).forEach(p=>{let l=n[p],h={id:l.node.id,node:{},feedsFrom:l.feedsFrom,feedsInto:l.feedsInto},c=Object.keys(Object.getPrototypeOf(l.node));c.length===0&&(c=Object.keys(l.node));let m={};c.forEach(E=>{if(typeof l.node[E]=="object"&&"value"in l.node[E])m[E]=l.node[E].value;else if(l.node[E].constructor.name==="AudioBuffer"){let u=l.node[E],f={duration:u.duration,length:u.length,numberOfChannels:u.numberOfChannels,sampleRate:u.sampleRate,channelData:u.getChannelData(0)};m[E]=f}else m[E]=l.node[E]}),h.node=m,t[p]=h});let d={name:e,data:t},a=new Blob([JSON.stringify(d,null,2)],{type:"application/json"}),s=URL.createObjectURL(a),r=document.createElement("a");r.href=s,r.download=e+".json",r.click()}function M(i,e){fetch("demo-presets/"+i+".json").then(t=>t.json()).then(t=>{k(t.data,e)})}var B=class extends AudioContext{constructor(){super();this.nodeColors={},this.nodeStore={},this.analyserNode=this.createAnalyser(),this.analyserNode.connect(this.destination),this.nodeCounts={addNode:function(e){let t=e.constructor.name;return this[t]?this[t]++:this[t]=1,this[t]},deleteNode:function(e,t=null){let n=e.constructor.name;return this[n]--,this[n]}},this.valueRanges={OscillatorNode:{detune:{min:-1200,default:0,max:1200,step:1},frequency:{min:300,default:440,max:1e3,step:1}},GainNode:{gain:{min:0,default:.3,max:2,step:.05}},AudioBufferSourceNode:{detune:{min:-1200,default:0,max:1200,step:1}},BiquadFilterNode:{gain:{max:40,min:-40,default:0,step:1},Q:{max:1e3,min:1e-4,default:1,step:.05},detune:{min:-1200,default:0,max:1200,step:1},frequency:{min:300,default:440,max:1e3,step:1}},ADSREnvelope:{attack:{min:0,default:0,max:1,step:.01},sustain:{min:0,default:0,max:1,step:.01},sustainLevel:{min:0,default:0,max:1,step:.01},decay:{min:0,default:0,max:1,step:.01},release:{min:0,default:0,max:10,step:.01}},waveType:["sine","square","triangle","sawtooth"],filterType:["lowpass","highpass","allpass","bandpass","notch","peaking","lowshelf","highshelf"]}}getGainNodes(){return[...Object.keys(this.nodeStore)].filter(e=>e.indexOf("Gain")>=0).map(e=>this.nodeStore[e])}getOscNodes(){return[...Object.keys(this.nodeStore)].filter(e=>e.indexOf("Oscillator")>=0||e.indexOf("AudioBuffer")>=0)}createAudioContextDestinationUI(e){let t=document.createElement("div");t.id=this.destination.constructor.name,t.style.border="1px solid #000",t.style.borderRadius="20px 20px 20px 20px",t.style.padding="5px",t.style.width="200px",t.style.height="200px",t.style.textAlign="center",t.style.position="absolute",t.style.top="20%",t.style.left="45%",t.style.zIndex="10";let n=document.createElement("h2");n.textContent="audio context destination",t.appendChild(n),e.appendChild(t)}reset(){let e=document.getElementById("nodeArea");if(e)for(let t in this.nodeStore)t!=="AudioDestinationNode"&&this._deleteNode(this.nodeStore[t].node,e)}_addBaseValueProp(e){for(let t in e)e[t]&&e[t].value&&(e[t].baseValue=e[t].value)}_storeNode(e,t){this.nodeStore[t]={node:e,feedsInto:[],feedsFrom:[]}}_createWaveNode(){let e=this.createOscillator();return e.frequency.value=440,e.detune.value=0,e.type="sine",e.id=e.constructor.name+this.nodeCounts.addNode(e),this._addBaseValueProp(e),e}_createNoiseNode(){let e=this.createBufferSource(),t=this.sampleRate,n=this.createBuffer(1,t,t),o=n.getChannelData(0);for(let d=0;d<t;d++)o[d]=Math.random()*2-1;return this._addBaseValueProp(e),e.buffer=n,e.loop=!0,e.id=e.constructor.name+this.nodeCounts.addNode(e),e}_createGainNode(){let e=this.createGain();return e.connect(this.analyserNode),e.gain.value=this.valueRanges.GainNode.gain.default,this._addBaseValueProp(e),e.id=e.constructor.name+this.nodeCounts.addNode(e),e}_createBiquadFilterNode(){let e=this.createBiquadFilter();return e.frequency.value=440,e.detune.value=0,e.gain.value=0,e.Q.value=1,e.type="lowpass",this._addBaseValueProp(e),e.id=e.constructor.name+this.nodeCounts.addNode(e),e}_createADSREnvelopeNode(){let e=new C;return e.id="ADSREnvelope"+this.nodeCounts.addNode(e),e}_deleteNode(e,t){let n=e.id,o=this.nodeStore[n].node;this.nodeCounts.deleteNode(e);let d=this.nodeStore[n].feedsInto;d&&d.forEach(r=>{let p=document.getElementById("svgCanvas:"+n+":"+r);p&&t.removeChild(p);let l=this.nodeStore[r].feedsFrom;this.nodeStore[r].feedsFrom=l.filter(h=>h!==n)});let a=this.nodeStore[n].feedsFrom;a&&a.forEach(r=>{let p=document.getElementById("svgCanvas:"+r+":"+n);p&&t.removeChild(p);let l=this.nodeStore[r].feedsInto;this.nodeStore[r].feedsInto=l.filter(h=>h!==n)}),delete this.nodeStore[n];let s=document.getElementById(n);s&&t.removeChild(s)}_addNodeToInterface(e,t,n="100px",o="100px"){let d=this._createNodeUIElement(e);d.style.top=n,d.style.left=o,t.appendChild(d)}_createNodeUIElement(e){let t=document.createElement("div");t.style.backgroundColor="#fff",t.style.zIndex="10",t.style.position="absolute",t.style.border="1px solid #000",t.style.borderRadius="20px 20px 20px 20px",t.style.padding="5px",t.style.textAlign="center",t.classList.add("nodeElement"),t.id=e.id;let n=this.nodeStore[e.id];t.addEventListener("mousedown",s=>{let r=s.clientX-t.offsetLeft+window.pageXOffset,p=s.clientY-t.offsetTop+window.pageYOffset;function l(c,m){t.style.left=c+"px",t.style.top=m+"px",n.feedsInto&&n.feedsInto.forEach(E=>{let u=document.getElementById("svgCanvas:"+t.id+":"+E);u!==null&&document.getElementById("nodeArea").removeChild(u);let f=document.getElementById(E);f!==null&&(t.id.indexOf("ADSR")>=0?x(t,f,!0):x(t,f))}),n.feedsFrom&&n.feedsFrom.forEach(E=>{let u=document.getElementById("svgCanvas:"+E+":"+t.id);u!==null&&document.getElementById("nodeArea").removeChild(u);let f=document.getElementById(E);f!==null&&(E.indexOf("ADSR")>=0?x(f,t,!0):x(f,t))})}function h(c){c.stopPropagation(),!!c.target.classList.contains("nodeElement")&&l(c.pageX-r,c.pageY-p)}document.addEventListener("mousemove",h),t.addEventListener("mouseup",c=>{document.removeEventListener("mousemove",h)})}),t.addEventListener("dblclick",s=>{D(n,this.valueRanges)});let o=document.createElement("h4");o.textContent=e.id,t.appendChild(o);let d=document.createElement("button");d.textContent="connect to another node",d.addEventListener("click",s=>{function r(u,f,g){let y=u.target;if(y&&!y.classList.contains("nodeElement")&&y.parentNode&&(y=y.parentNode),y&&!y.classList.contains("nodeElement")||g[y.id].node.numberOfInputs<1)return;y.style.backgroundColor="#fff",g[f.id].feedsInto.push(y.id),g[y.id].feedsFrom.push(f.id),f.id.indexOf("ADSR")>=0?x(f,y,!0):x(f,y),[...Object.keys(g)].forEach(I=>{if(I!==f.id){let S=document.getElementById(I);S!==null&&(S.removeEventListener("mouseover",h),S.removeEventListener("mouseleave",c),S.removeEventListener("click",l))}})}let p=this.nodeStore;function l(u){r(u,t,p)}function h(u){u.target.classList.contains("nodeElement")&&(u.target.style.backgroundColor="#ffcccc")}function c(u){u.target.classList.contains("nodeElement")&&(u.target.style.backgroundColor="#fff")}function m(u,f,g){u.preventDefault(),[...Object.keys(g)].forEach(y=>{if(y!==f.id){let b=document.getElementById(y);b!==null&&(b.removeEventListener("mouseover",h),b.removeEventListener("mouseleave",c),b.removeEventListener("click",l),b.style.backgroundColor="#fff")}}),document.body.removeEventListener("contextmenu",E)}function E(u){m(u,t,p)}document.body.addEventListener("contextmenu",E),[...Object.keys(p)].forEach(u=>{if(u!==t.id){let f=document.getElementById(u);f!==null&&(f.addEventListener("mouseover",h),f.addEventListener("mouseleave",c),f.addEventListener("click",l))}})}),t.appendChild(d),t.appendChild(document.createElement("br"));let a=document.createElement("button");return a.textContent="delete",a.addEventListener("click",s=>{let r=document.getElementById("nodeArea");r&&this._deleteNode(e,r)}),t.appendChild(a),t}addNewNode(e,t=!0){let n=null;if(e==="waveNode")n=this._createWaveNode();else if(e==="biquadFilterNode")n=this._createBiquadFilterNode();else if(e==="noiseNode")n=this._createNoiseNode();else if(e==="gainNode")n=this._createGainNode();else if(e==="ADSREnvelope")n=this._createADSREnvelopeNode();else{console.log("unknown node type!");return}this._storeNode(n,n.id);let o=document.getElementById("nodeArea");if(t&&o&&this._addNodeToInterface(n,o),e==="gainNode"){let d=this.destination.constructor.name;this.nodeStore[n.id].feedsInto=[d],this.nodeStore[d].feedsFrom.push(n.id);let a=document.getElementById(n.id),s=document.getElementById(d);a&&s&&x(a,s)}}};var P={C8:4186.01,B7:3951.07,Bb7:3729.31,"A#7":3729.31,A7:3520,Ab7:3322.44,"G#7":3322.44,G7:3135.96,Gb7:2959.96,"F#7":2959.96,F7:2793.83,E7:2637.02,Eb7:2489.02,"D#7":2489.02,D7:2349.32,Db7:2217.46,"C#7":2217.46,C7:2093,B6:1975.53,Bb6:1864.66,"A#6":1864.66,A6:1760,Ab6:1661.22,"G#6":1661.22,G6:1567.98,Gb6:1479.98,"F#6":1479.98,F6:1396.91,E6:1318.51,Eb6:1244.51,"D#6":1244.51,D6:1174.66,Db6:1108.73,"C#6":1108.73,C6:1046.5,B5:987.77,Bb5:932.33,"A#5":932.33,A5:880,Ab5:830.61,"G#5":830.61,G5:783.99,Gb5:739.99,"F#5":739.99,F5:698.46,E5:659.25,Eb5:622.25,"D#5":622.25,D5:587.33,Db5:554.37,"C#5":554.37,C5:523.25,B4:493.88,Bb4:466.16,"A#4":466.16,A4:440,Ab4:415.3,"G#4":415.3,G4:392,Gb4:369.99,"F#4":369.99,F4:349.23,E4:329.63,Eb4:311.13,"D#4":311.13,D4:293.66,Db4:277.18,"C#4":277.18,C4:261.63,B3:246.94,Bb3:233.08,"A#3":233.08,A3:220,Ab3:207.63,"G#3":207.63,G3:196,Gb3:185,"F#3":185,F3:174.61,E3:164.81,Eb3:155.56,"D#3":155.56,D3:146.83,Db3:138.59,"C#3":138.59,C3:130.81,B2:123.47,Bb2:116.54,"A#2":116.54,A2:110,Ab2:103.83,"G#2":103.83,G2:98,Gb2:92.5,"F#2":92.5,F2:87.31,E2:82.41,Eb2:77.78,"D#2":77.78,D2:73.42,Db2:69.3,"C#2":69.3,C2:65.41},G=class{constructor(){this.nodeFactory=new B,this.nodeFactory.suspend(),this.nodeFactory._storeNode(this.nodeFactory.destination,this.nodeFactory.destination.constructor.name)}};function _(i,e){let t=e.nodeStore,n=e.getOscNodes(),o=[];n.forEach(s=>{let r=t[s].node,p={};Object.keys(Object.getPrototypeOf(r)).forEach(c=>{let m=r[c];p[c]=m.value!==void 0?m.value:m,c==="frequency"&&(p[c]=i)});let l=new window[r.constructor.name](e,p);o.push(l),t[s].feedsInto.forEach(c=>{let m=t[c].node;if(l.connect(m),m.id.indexOf("Gain")<0){let E=t[m.id].feedsInto,u=m;for(;E.length>0;){let f=E.pop(),g=t[f].node;console.log("connecting: "+u.constructor.name+" to: "+g.constructor.name),u.connect(g),u=g;let y=t[f].feedsInto.filter(b=>b.indexOf("Destination")<0);E=E.concat(y)}}})});let d=e.currentTime;return e.getGainNodes().forEach(s=>{let r=s.node,p=H(s);p?t[p].node.applyADSR(r.gain,d):r.gain.setValueAtTime(r.gain.value,d)}),o}function H(i){let e=i.feedsFrom;for(let t=0;t<e.length;t++){let n=e[t];if(n.indexOf("ADSR")>=0)return n}return null}function j(){document.getElementById("addWavNode").addEventListener("click",i=>{v.nodeFactory.addNewNode("waveNode")}),document.getElementById("addGainNode").addEventListener("click",i=>{v.nodeFactory.addNewNode("gainNode")}),document.getElementById("addNoiseNode").addEventListener("click",i=>{v.nodeFactory.addNewNode("noiseNode")}),document.getElementById("addFilterNode").addEventListener("click",i=>{v.nodeFactory.addNewNode("biquadFilterNode")}),document.getElementById("addADSRNode").addEventListener("click",i=>{v.nodeFactory.addNewNode("ADSREnvelope")}),document.getElementById("download").addEventListener("click",i=>{R(v.nodeFactory)}),document.getElementById("import").addEventListener("click",i=>{O(v.nodeFactory)}),document.getElementById("demos").addEventListener("change",i=>{let e=i.target,t=e.options[e.selectedIndex].value;t!==""&&M(t,v.nodeFactory)}),document.getElementById("toggleViz").addEventListener("click",i=>{let e=i.target.style.border;!e||e==="3px solid rgb(0, 204, 0)"?(i.target.style.border="3px solid rgb(204, 0, 0)",i.target.textContent="off",window.cancelAnimationFrame(F),N.clearRect(0,0,A.width,A.height)):(i.target.style.border="3px solid rgb(0, 204, 0)",i.target.textContent="on",F=requestAnimationFrame(T))})}var v=new G,W=[...document.getElementsByClassName("note")],L=[];j();v.nodeFactory.createAudioContextDestinationUI(document.getElementById("nodeArea"));function z(i,e){let t=e;function n(o){o.target&&(o.target.style.stroke="#000000",o.target.style.strokeWidth="0.264583px");let d=t.currentTime;e.getGainNodes().forEach(s=>{let r=s.node,p=H(s);if(p){let l=e.nodeStore[p].node;r.gain.linearRampToValueAtTime(0,t.currentTime+l.release),d=Math.max(t.currentTime+l.release,d),r.gain.setValueAtTime(r.gain.baseValue,t.currentTime+l.release+.01)}else r.gain.setValueAtTime(r.gain.baseValue,t.currentTime)}),L.forEach(s=>{s.stop(d)})}i.forEach(o=>{o.addEventListener("mouseleave",n),o.addEventListener("mouseup",n),o.addEventListener("mousedown",d=>{d.buttons===1&&(d.target.style.stroke="#2470FC",d.target.style.strokeWidth="0.6px",t.resume().then(()=>{let a=P[o.id+document.getElementById("octaveSelect").value];L=_(a,e),L.forEach(s=>{s.start(0)})}))})})}z(W,v.nodeFactory);v.nodeFactory.analyserNode.fftSize=2048;var w=v.nodeFactory.analyserNode.frequencyBinCount,V=new Uint8Array(w),A=document.getElementById("vizCanvas"),N=A.getContext("2d");N.clearRect(0,0,A.width,A.height);var F=requestAnimationFrame(T);function T(){let i=A.width,e=A.height;if(N){v.nodeFactory.analyserNode.getByteTimeDomainData(V),N.fillStyle="rgb(200, 200, 200)",N.fillRect(0,0,i,e),N.lineWidth=2,N.strokeStyle="rgb(0, 0, 0)",N.beginPath();let t=i/w,n=0;for(let o=0;o<w;o++){let a=V[o]/128*(e/2);o===0?N.moveTo(n,a):N.lineTo(n,a),n+=t}N.stroke(),F=requestAnimationFrame(T)}}})();
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const NodeFactory_1 = require("./NodeFactory");
+const utils_1 = require("./utils");
+const NOTE_FREQ = {
+    "C8": 4186.01,
+    "B7": 3951.07,
+    "Bb7": 3729.31,
+    "A#7": 3729.31,
+    "A7": 3520.00,
+    "Ab7": 3322.44,
+    "G#7": 3322.44,
+    "G7": 3135.96,
+    "Gb7": 2959.96,
+    "F#7": 2959.96,
+    "F7": 2793.83,
+    "E7": 2637.02,
+    "Eb7": 2489.02,
+    "D#7": 2489.02,
+    "D7": 2349.32,
+    "Db7": 2217.46,
+    "C#7": 2217.46,
+    "C7": 2093.00,
+    "B6": 1975.53,
+    "Bb6": 1864.66,
+    "A#6": 1864.66,
+    "A6": 1760.00,
+    "Ab6": 1661.22,
+    "G#6": 1661.22,
+    "G6": 1567.98,
+    "Gb6": 1479.98,
+    "F#6": 1479.98,
+    "F6": 1396.91,
+    "E6": 1318.51,
+    "Eb6": 1244.51,
+    "D#6": 1244.51,
+    "D6": 1174.66,
+    "Db6": 1108.73,
+    "C#6": 1108.73,
+    "C6": 1046.50,
+    "B5": 987.77,
+    "Bb5": 932.33,
+    "A#5": 932.33,
+    "A5": 880.00,
+    "Ab5": 830.61,
+    "G#5": 830.61,
+    "G5": 783.99,
+    "Gb5": 739.99,
+    "F#5": 739.99,
+    "F5": 698.46,
+    "E5": 659.25,
+    "Eb5": 622.25,
+    "D#5": 622.25,
+    "D5": 587.33,
+    "Db5": 554.37,
+    "C#5": 554.37,
+    "C5": 523.25,
+    "B4": 493.88,
+    "Bb4": 466.16,
+    "A#4": 466.16,
+    "A4": 440.00,
+    "Ab4": 415.30,
+    "G#4": 415.30,
+    "G4": 392.00,
+    "Gb4": 369.99,
+    "F#4": 369.99,
+    "F4": 349.23,
+    "E4": 329.63,
+    "Eb4": 311.13,
+    "D#4": 311.13,
+    "D4": 293.66,
+    "Db4": 277.18,
+    "C#4": 277.18,
+    "C4": 261.63,
+    "B3": 246.94,
+    "Bb3": 233.08,
+    "A#3": 233.08,
+    "A3": 220.00,
+    "Ab3": 207.63,
+    "G#3": 207.63,
+    "G3": 196.00,
+    "Gb3": 185.00,
+    "F#3": 185.00,
+    "F3": 174.61,
+    "E3": 164.81,
+    "Eb3": 155.56,
+    "D#3": 155.56,
+    "D3": 146.83,
+    "Db3": 138.59,
+    "C#3": 138.59,
+    "C3": 130.81,
+    "B2": 123.47,
+    "Bb2": 116.54,
+    "A#2": 116.54,
+    "A2": 110.00,
+    "Ab2": 103.83,
+    "G#2": 103.83,
+    "G2": 98.00,
+    "Gb2": 92.50,
+    "F#2": 92.50,
+    "F2": 87.31,
+    "E2": 82.41,
+    "Eb2": 77.78,
+    "D#2": 77.78,
+    "D2": 73.42,
+    "Db2": 69.30,
+    "C#2": 69.30,
+    "C2": 65.41
+};
+// maybe move all the UI handling stuff to another class that will be comprised of the nodefactory class?
+class SoundMaker {
+    constructor() {
+        this.nodeFactory = new NodeFactory_1.NodeFactory();
+        this.nodeFactory.suspend(); // need to suspend audio context (which a node factory is) initially
+        // store the audio context's destination as a node
+        this.nodeFactory._storeNode(this.nodeFactory.destination, this.nodeFactory.destination.constructor.name);
+    }
+}
+function processNote(noteFreq, nodeFactory) {
+    // this is used to create and use new nodes each time a note needs to be played
+    const nodeStore = nodeFactory.nodeStore;
+    // probably should look at not just osc nodes but those with 0 input.
+    // i.e. OscillatorNodes, AudioBufferSourceNodes
+    const oscNodes = nodeFactory.getOscNodes();
+    const nodesToStart = [];
+    oscNodes.forEach((osc) => {
+        // create a new osc node from the template props
+        const oscTemplateNode = nodeStore[osc].node;
+        const templateProps = {};
+        // TODO: do we really need to extract values for AudioParams like this?
+        Object.keys(Object.getPrototypeOf(oscTemplateNode)).forEach((propName) => {
+            const prop = oscTemplateNode[propName];
+            templateProps[propName] = (prop.value !== undefined) ? prop.value : prop;
+            if (propName === "frequency") {
+                templateProps[propName] = noteFreq;
+            }
+        });
+        // the audio node constructors are accessible via the window object
+        // TODO: try solving TS2351? (don't cast window as any)
+        const newOsc = new (window[oscTemplateNode.constructor.name])(nodeFactory, templateProps);
+        nodesToStart.push(newOsc);
+        // need to go down all the way to each node and make connections
+        // gain nodes don't need to be touched as they're already attached to the context dest by default
+        const connections = nodeStore[osc].feedsInto;
+        connections.forEach((conn) => {
+            // connect the new osc node to this node which will act as a sink (the new osc -> this node)
+            const sinkNode = nodeStore[conn].node;
+            newOsc.connect(sinkNode);
+            // if sink is a gain node, no need to go further
+            if (sinkNode.id.indexOf("Gain") < 0) {
+                let stack = nodeStore[sinkNode.id]["feedsInto"];
+                let newSource = sinkNode;
+                while (stack.length > 0) {
+                    const next = stack.pop();
+                    const currSink = nodeStore[next].node;
+                    console.log("connecting: " + newSource.constructor.name + " to: " + currSink.constructor.name);
+                    newSource.connect(currSink);
+                    newSource = currSink;
+                    const nextConnections = nodeStore[next]["feedsInto"].filter((name) => name.indexOf("Destination") < 0);
+                    stack = stack.concat(nextConnections);
+                }
+            }
+        });
+    });
+    const time = nodeFactory.currentTime;
+    const gainNodes = nodeFactory.getGainNodes();
+    gainNodes.forEach((gain) => {
+        // we need to understand the distinction of connecting to another node vs. connecting to an AudioParam of another node!
+        // maybe use dotted lines?
+        const gainNode = gain.node;
+        const adsr = getADSRFeed(gain);
+        if (adsr) {
+            // if an adsr envelope feeds into this gain node, run the adsr function on the gain
+            const envelope = nodeStore[adsr].node;
+            envelope.applyADSR(gainNode.gain, time);
+        }
+        else {
+            gainNode.gain.setValueAtTime(gainNode.gain.value, time);
+        }
+    });
+    return nodesToStart;
+}
+function getADSRFeed(sinkNode) {
+    // check if sinkNode has an ADSR envelope
+    const feedsFrom = sinkNode.feedsFrom;
+    for (let i = 0; i < feedsFrom.length; i++) {
+        const source = feedsFrom[i];
+        if (source.indexOf("ADSR") >= 0) {
+            return source; // return name of ADSR envelope
+        }
+    }
+    ;
+    return null;
+}
+function setupButtons() {
+    document.getElementById('addWavNode').addEventListener('click', (evt) => {
+        soundMaker.nodeFactory.addNewNode("waveNode");
+    });
+    document.getElementById('addGainNode').addEventListener('click', (evt) => {
+        soundMaker.nodeFactory.addNewNode("gainNode");
+    });
+    document.getElementById('addNoiseNode').addEventListener('click', (evt) => {
+        soundMaker.nodeFactory.addNewNode("noiseNode");
+    });
+    document.getElementById('addFilterNode').addEventListener('click', (evt) => {
+        soundMaker.nodeFactory.addNewNode("biquadFilterNode");
+    });
+    document.getElementById('addADSRNode').addEventListener('click', (evt) => {
+        soundMaker.nodeFactory.addNewNode("ADSREnvelope");
+    });
+    document.getElementById('download').addEventListener('click', (evt) => {
+        (0, utils_1.exportPreset)(soundMaker.nodeFactory);
+    });
+    document.getElementById('import').addEventListener('click', (evt) => {
+        (0, utils_1.importPreset)(soundMaker.nodeFactory);
+    });
+    document.getElementById('demos').addEventListener('change', (evt) => {
+        const selectElement = evt.target;
+        const presetName = selectElement.options[selectElement.selectedIndex].value;
+        if (presetName !== "") {
+            (0, utils_1.loadDemoPreset)(presetName, soundMaker.nodeFactory);
+        }
+    });
+    document.getElementById('toggleViz').addEventListener('click', (evt) => {
+        //const style = window.getComputedStyle(e.target);
+        //console.log(style.getPropertyValue('border'));
+        const borderStyle = evt.target.style.border;
+        if (!borderStyle || borderStyle === '3px solid rgb(0, 204, 0)') {
+            evt.target.style.border = '3px solid rgb(204, 0, 0)';
+            evt.target.textContent = 'off';
+            // stop visualization
+            window.cancelAnimationFrame(doVisualization);
+            // clear canvas
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        else {
+            evt.target.style.border = '3px solid rgb(0, 204, 0)';
+            evt.target.textContent = 'on';
+            // start visualization
+            doVisualization = requestAnimationFrame(runViz);
+        }
+    });
+}
+//////////////// SET UP  ///////////////////
+const soundMaker = new SoundMaker();
+const notes = [...document.getElementsByClassName("note")];
+let currPlayingNodes = [];
+setupButtons();
+soundMaker.nodeFactory.createAudioContextDestinationUI(document.getElementById("nodeArea"));
+// set up the keyboard for playing notes
+function setupKeyboard(notes, nodeFactory) {
+    const audioContext = nodeFactory;
+    function stopPlay(evt) {
+        if (evt.target) {
+            evt.target.style.stroke = "#000000";
+            evt.target.style.strokeWidth = "0.264583px";
+        }
+        let maxEndTime = audioContext.currentTime;
+        // apply adsr release, if any
+        const gainNodes = nodeFactory.getGainNodes();
+        gainNodes.forEach((gain) => {
+            const gainNode = gain.node;
+            const adsr = getADSRFeed(gain);
+            if (adsr) {
+                const envelope = nodeFactory.nodeStore[adsr].node;
+                gainNode.gain.linearRampToValueAtTime(0.0, audioContext.currentTime + envelope.release);
+                maxEndTime = Math.max(audioContext.currentTime + envelope.release, maxEndTime);
+                // also reset gain value back to whatever it's currently set at
+                gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime + envelope.release + 0.01);
+            }
+            else {
+                // slightly buggy: if you remove an ADSR envelope, the next time a note is played the gain value will be at
+                // wherever the ADSR left off (but after that the volume will be correct as it'll use the base value)
+                // maybe we should fix gain stuff on mousedown instead?
+                gainNode.gain.setValueAtTime(gainNode.gain.baseValue, audioContext.currentTime);
+            }
+        });
+        currPlayingNodes.forEach((osc) => {
+            osc.stop(maxEndTime);
+        });
+    }
+    notes.forEach((note) => {
+        note.addEventListener('mouseleave', stopPlay);
+        note.addEventListener('mouseup', stopPlay);
+        note.addEventListener('mousedown', (evt) => {
+            // highlight the key outline on the svg keyboard when pressed
+            if (evt.buttons === 1) {
+                evt.target.style.stroke = "#2470FC";
+                evt.target.style.strokeWidth = "0.6px";
+                audioContext.resume().then(() => {
+                    const noteFreq = NOTE_FREQ[note.id + document.getElementById('octaveSelect').value];
+                    currPlayingNodes = processNote(noteFreq, nodeFactory);
+                    currPlayingNodes.forEach((osc) => {
+                        osc.start(0);
+                    });
+                });
+            }
+        });
+    });
+}
+setupKeyboard(notes, soundMaker.nodeFactory);
+// setup for audio visualization
+// TODO: do something about these global variables? kinda messy
+soundMaker.nodeFactory.analyserNode.fftSize = 2048;
+const bufferLen = soundMaker.nodeFactory.analyserNode.frequencyBinCount;
+const dataArray = new Uint8Array(bufferLen);
+const canvas = document.getElementById('vizCanvas');
+const canvasCtx = canvas.getContext('2d');
+canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+// https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Visualizations_with_Web_Audio_API
+let doVisualization = requestAnimationFrame(runViz); // keep the request id around to be able to cancel if needed
+function runViz() {
+    const width = canvas.width;
+    const height = canvas.height;
+    if (canvasCtx) {
+        soundMaker.nodeFactory.analyserNode.getByteTimeDomainData(dataArray);
+        canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+        canvasCtx.fillRect(0, 0, width, height);
+        canvasCtx.lineWidth = 2;
+        canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+        canvasCtx.beginPath();
+        const sliceWidth = width / bufferLen;
+        let xPos = 0;
+        for (let i = 0; i < bufferLen; i++) {
+            const dataVal = dataArray[i] / 128.0; // why 128?
+            const yPos = dataVal * (height / 2);
+            if (i === 0) {
+                canvasCtx.moveTo(xPos, yPos);
+            }
+            else {
+                canvasCtx.lineTo(xPos, yPos);
+            }
+            xPos += sliceWidth;
+        }
+        canvasCtx.stroke();
+        doVisualization = requestAnimationFrame(runViz);
+    }
+}
+///////// TESTS
+// TODO: move to separate file
+function Test1() {
+    let sm = new SoundMaker();
+    console.log(sm.nodeFactory !== undefined);
+    let nf = sm.nodeFactory;
+    nf.addNewNode("waveNode", false);
+    console.log(Object.keys(nf.nodeStore).length === 1);
+    console.log(Object.keys(nf.nodeStore)[0] === "OscillatorNode1");
+    console.log(nf.nodeCounts["OscillatorNode"] === 1);
+}
+//Test1();
 //# sourceMappingURL=soundmaker.js.map

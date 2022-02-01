@@ -113,7 +113,8 @@ export function showParameterEditWindow(nodeInfo: AudioStoreNode, valueRanges: a
             
             // what kind of param is it 
             // probably should refactor this. instead, make sure each NODE INSTANCE has some new field called 'nodeType' that we can use?
-            let props = valueRanges[node.constructor.name] || valueRanges[node.type];
+            const nodeConstructorName = node.id.match(/[a-zA-Z]+/g)[0];
+            let props = valueRanges[nodeConstructorName] || valueRanges[node.type];
             props = props[prop];
             
             const slider = document.createElement('input');
